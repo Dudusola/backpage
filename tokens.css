@@ -1,0 +1,42 @@
+/* Hallmark · genre: editorial · macrostructure: app shell (bespoke: sports back page) · theme: custom · enrichment: Tier B hand-built SVG court · nav: bottom text tabs · footer: none
+ * vibe: late-edition sports back page · paper oklch(96% 0.012 85) · accent oklch(53% 0.2 27) press red
+ * fonts: Big Shoulders Display + Newsreader + JetBrains Mono · axes: light / display-condensed / warm
+ * pre-emit critique: P4 H4 E4 S5 R4 V4
+ */
+@font-face { font-family: "Big Shoulders Display"; font-weight: 600; font-display: swap; src: url(fonts/big-shoulders-display-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "Big Shoulders Display"; font-weight: 800; font-display: swap; src: url(fonts/big-shoulders-display-latin-800-normal.woff2) format("woff2"); }
+@font-face { font-family: "Newsreader"; font-weight: 400; font-display: swap; src: url(fonts/newsreader-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "Newsreader"; font-weight: 400; font-style: italic; font-display: swap; src: url(fonts/newsreader-latin-400-italic.woff2) format("woff2"); }
+@font-face { font-family: "Newsreader"; font-weight: 600; font-display: swap; src: url(fonts/newsreader-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url(fonts/jetbrains-mono-latin-500-normal.woff2) format("woff2"); }
+
+:root {
+  --color-paper: oklch(96% 0.012 85);
+  --color-paper-2: oklch(92.5% 0.014 85);
+  --color-rule: oklch(80% 0.012 85);
+  --color-muted: oklch(42% 0.01 70);
+  --color-ink: oklch(19% 0.012 60);
+  --color-accent: oklch(53% 0.2 27);
+  --color-good: oklch(55% 0.13 150);
+  --color-fair: oklch(84% 0.12 90);
+  --color-focus: oklch(53% 0.2 27);
+
+  --font-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --font-body: "Newsreader", Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px;
+  --space-lg: 24px; --space-xl: 32px; --space-2xl: 48px;
+
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1.0625rem;
+  --text-lg: 1.25rem; --text-xl: 1.75rem; --text-display: clamp(2.6rem, 13vw, 4.2rem);
+
+  --radius: 2px;
+  --rule: 1px solid var(--color-rule);
+  --rule-ink: 1px solid var(--color-ink);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-short: 120ms; --dur-med: 240ms;
+  --tabs-h: 56px;
+}

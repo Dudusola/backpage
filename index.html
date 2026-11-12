@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Back Page</title>
+  <meta name="description" content="A sports career, told in headlines. Basketball and soccer.">
+  <meta name="theme-color" content="#f4f0e7">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-512.png">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="mast">
+    <h1 class="wordmark">Back Page</h1>
+    <p class="dateline" id="dateline"></p>
+  </header>
+  <div class="strip" id="strip" hidden></div>
+  <main id="view"></main>
+  <nav class="tabs" id="tabs" aria-label="Sections" hidden>
+    <button data-a="tab" data-k="career">Career</button>
+    <button data-a="tab" data-k="life">Life</button>
+    <button data-a="tab" data-k="money">Money</button>
+    <button data-a="tab" data-k="record">Record</button>
+  </nav>
+  <script src="game.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>

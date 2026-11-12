@@ -1,0 +1,13 @@
+{
+  "name": "Back Page",
+  "short_name": "Back Page",
+  "description": "A sports career, told in headlines.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f4f0e7",
+  "theme_color": "#f4f0e7",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
