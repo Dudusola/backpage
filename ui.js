@@ -7,7 +7,7 @@
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   let s = null, tab = 'career', lastStep = '', installEvt = null, rolling = false;
-  let draft = { name: '', sport: 'bb', pos: 'PG', arch: 'sniper', origin: 'single', story: '', look: { skin: 4, hair: 'fade', beard: 0, band: 0 } };
+  let draft = { name: '', sport: 'bb', pos: 'PG', country: 'NG', origin: 'single', story: '', look: { skin: 4, hair: 'fade', beard: 0, band: 0 } };
   try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) { s = null; }
   if (s && s.v === 2) G.migrate(s);
   if (s && s.v !== 3) s = null; // older saves predate ceilings and height
@@ -59,7 +59,6 @@
   // ---------- screens ----------
   function setup() {
     const sp = G.SPORTS[draft.sport], l = draft.look;
-    if (!sp.arch.some((a) => a.id === draft.arch)) draft.arch = sp.arch[0].id;
     if (!sp.pos.some((p) => p.id === draft.pos)) draft.pos = sp.pos[0].id;
     return `<section class="step">
       <h2 class="headline">Your career, in headlines</h2>
@@ -71,9 +70,7 @@
       <fieldset><legend class="field">Position</legend><div class="seg">
         ${sp.pos.map((p) => `<button type="button" class="choice" data-a="pos" data-k="${p.id}" aria-pressed="${draft.pos === p.id}">${p.n}</button>`).join('')}
       </div><p class="hint">${esc(sp.pos.find((p) => p.id === draft.pos).d)} It decides your moves in matches and who you get your height from.</p></fieldset>
-      <fieldset><legend class="field">Kind of player</legend><ul class="choices">
-        ${sp.arch.map((a) => `<li><button type="button" class="choice" data-a="arch" data-k="${a.id}" aria-pressed="${draft.arch === a.id}">${a.n}</button><p class="hint">${a.d}</p></li>`).join('')}
-      </ul></fieldset>
+      <label class="field">Country<select id="country">${G.COUNTRIES.map((c) => `<option value="${c.id}" ${draft.country === c.id ? 'selected' : ''}>${esc(c.n)}</option>`).join('')}</select></label>
       <fieldset><legend class="field">Where you come from</legend><ul class="choices">
         ${G.ORIGINS.map((o) => `<li><button type="button" class="choice" data-a="origin" data-k="${o.id}" aria-pressed="${draft.origin === o.id}">${o.n}</button><p class="hint">${o.d}</p></li>`).join('')}
       </ul></fieldset>
@@ -125,7 +122,7 @@
     if (c.t === 'event') {
       const e = G.EV[c.id];
       return `<h2 class="title">${esc(G.tx(s, e.title))}</h2>` + (c.out ? out(c)
-        : `<p class="text">${esc(G.tx(s, e.text))}</p><div class="choices">${e.c.map((x, i) => choice('ev', i, x[0])).join('')}</div>`);
+        : `<p class="text">${esc(G.tx(s, e.text))}</p><div class="choices">${e.c.map((x, i) => choice('ev', i, G.tx(s, x[0]))).join('')}</div>`);
     }
     if (c.t === 'match') return match(c.m, sp);
     if (c.t === 'report') {
@@ -139,7 +136,7 @@
       const l = c.l;
       return `<article><p class="meta">Final edition · ${l.n} seasons</p><figure class="photo">${me()}<figcaption>${esc(s.name)}</figcaption></figure><h2 class="headline">${esc(l.rank)}</h2>
         <p class="stand">${esc(s.name)} retires at ${s.age} with ${s.titles} ${s.titles === 1 ? 'title' : 'titles'} and a net worth of ${G.money(l.worth)}.</p>
-        <p class="text">Where it started: ${esc(backstory())}</p><p class="ribbon">${esc(l.ribbon)}</p>
+        <p class="text">Where it started: ${esc(backstory())}</p>${s.after ? `<p class="text">After: ${esc(s.after)}</p>` : ''}<p class="ribbon">${esc(l.ribbon)}</p>
         <table class="box"><tr><th>Legacy score</th><td>${l.score}</td></tr><tr><th>Titles</th><td>${s.titles}</td></tr><tr><th>${sp.mvp}</th><td>${s.mvps}</td></tr><tr><th>${sp.star}</th><td>${s.stars}</td></tr><tr><th>Peak overall</th><td>${s.peak}</td></tr><tr><th>Clubs</th><td>${s.teams}</td></tr></table>
         ${btn('fresh', 'Start a new career')}</article>`;
     }
@@ -151,7 +148,7 @@
       <div class="score"><span>${esc(last(s.team))}</span><b>${G.scoreAt(m)[0]}</b><b>${G.scoreAt(m)[1]}</b><span>${esc(last(m.opp))}</span></div>`;
     if (m.done) return head + `<span class="grade" aria-label="Grade ${m.done.grade}">${m.done.grade}</span>
       <p class="res">${m.done.win ? 'A win.' : m.done.draw ? 'A draw.' : 'A defeat.'} You came through in ${m.hits} of ${m.moments.length} moments${m.mine ? ` and scored ${m.mine}` : ''}.</p>${deltas(m.done.d)}${btn('cont', 'Continue')}`;
-    const mo = m.moments[m.i], opts = G.optsFor(s, mo.k), him = last(mo.vs[0]);
+    const mo = m.moments[m.i], opts = G.optsFor(s, mo), him = last(mo.vs[0]);
     const who = `<p class="meta">${esc(mo.clock)}${mo.clutch ? ' · Clutch' : ''} · ${mo.k === 'def' ? 'Coming at you' : 'Marking you'}: ${esc(mo.vs[0])}</p>`;
     let body;
     if (m.res) body = `<p class="res">${esc(m.res.text)}</p><p class="hint">${m.res.q === 'g' ? 'In the green.' : m.res.q === 'y' ? (m.res.hit ? 'Close enough, this time.' : 'Close, but not enough.') : m.res.late ? 'Too late.' : 'Well off.'}</p>${btn('next', m.i + 1 < m.moments.length ? 'Next moment' : 'Full time')}`;
@@ -176,7 +173,7 @@
 
   function life() {
     const sp = G.SPORTS[s.sport];
-    return `<section class="step still"><figure class="photo">${me()}<figcaption>${G.posOf(s).n} · ${sp.arch.find((a) => a.id === s.arch).n} · ${G.fmtH(s.sport, s.h)}, ${G.build(s) === 'mid' ? 'average build' : G.build(s) + ' for the game'}</figcaption></figure>
+    return `<section class="step still"><figure class="photo">${me()}<figcaption>${G.home(s).adj} ${G.posOf(s).n.toLowerCase()} ·${G.fmtH(s.sport, s.h)}, ${G.build(s) === 'mid' ? 'average build' : G.build(s) + ' for the game'}</figcaption></figure>
       <h2 class="title">Overall ${G.ovr(s)}</h2><p class="hint">Now, and your ceiling. You grow towards it until 26.</p>
       <ul class="bars wide" style="margin-top:var(--space-sm);clear:both">${ratings(sp)}</ul>
       <h2 class="sub">People</h2><ul class="bars">
@@ -195,8 +192,11 @@
       <table class="box"><tr><th>Cash</th><td>${G.money(s.money)}</td></tr><tr><th>Salary</th><td>${G.money(s.salary)} a year, ${Math.max(0, s.contract)} ${s.contract === 1 ? 'year' : 'years'} left</td></tr></table>
       <h2 class="sub">Holdings</h2>
       ${s.inv.length ? `<ul class="rows">${s.inv.map((x, i) => `<li><div><b>${esc(x.n)}</b><span class="num">${G.money(x.amt)}</span></div>${x.kind === 'resto' ? '<span class="hint">Family. It stays.</span>' : `<button class="choice small" data-a="cash" data-i="${i}">Cash out</button>`}</li>`).join('')}</ul>` : `<p class="hint">Nothing yet. Money left as cash earns nothing.</p>`}
+      ${s.note ? `<p class="text">${esc(s.note)}</p>` : ''}
       <h2 class="sub">Invest a quarter of your cash</h2>
       <ul class="rows">${Object.entries(G.FUNDS).map(([k, f]) => `<li><div><b>${f.n}</b><span class="hint">${f.d}</span></div><button class="choice small" data-a="invest" data-k="${k}" ${q < 10 ? 'disabled' : ''}>Put in ${G.money(q)}</button></li>`).join('')}</ul>
+      <h2 class="sub">Buy</h2>
+      <ul class="rows">${Object.entries(G.BUY).map(([k, b]) => `<li><div><b>${b.n}</b><span class="hint">${b.d}</span></div><button class="choice small" data-a="buy" data-k="${k}" ${s.money < b.cost ? 'disabled' : ''}>${G.money(b.cost)}</button></li>`).join('')}</ul>
     </section>`;
   }
 
@@ -244,7 +244,7 @@
 
   // Back to the setup screen, filled in with this player so a new build is one tap away.
   function toSetup() {
-    draft = { name: s.name, sport: s.sport, pos: s.pos, arch: s.arch, origin: s.origin, story: s.story, look: Object.assign({}, s.look) };
+    draft = { name: s.name, sport: s.sport, pos: s.pos, country: s.country, origin: s.origin, story: s.story, look: Object.assign({}, s.look) };
     s = null; lastStep = ''; window.scrollTo(0, 0);
   }
 
@@ -253,7 +253,6 @@
     pos: (b) => { draft.pos = b.dataset.k; },
     redraw: () => { if (s.cur.t === 'draw' || confirm('Throw this build away and draw again?')) { G.redraw(s); lastStep = ''; window.scrollTo(0, 0); } },
     setup: () => { if (6 - s.cur.left.length === 0 && !s.cur.card || confirm('Go back to setup? This draw will be lost.')) toSetup(); },
-    arch: (b) => { draft.arch = b.dataset.k; },
     origin: (b) => { draft.origin = b.dataset.k; },
     look: (b) => { draft.look[b.dataset.k] = b.dataset.k === 'hair' ? b.dataset.v : +b.dataset.v; },
     begin: () => { s = G.create(draft); tab = 'career'; window.scrollTo(0, 0); },
@@ -272,7 +271,8 @@
     next: () => G.nextMoment(s),
     tab: (b) => { tab = b.dataset.k; window.scrollTo(0, 0); },
     act: (b) => G.act(s, b.dataset.k),
-    invest: (b) => G.invest(s, b.dataset.k),
+    invest: (b) => { G.invest(s, b.dataset.k); s.note = ''; },
+    buy: (b) => { G.buy(s, b.dataset.k); s.note = `Bought: ${G.BUY[b.dataset.k].n.toLowerCase()}.`; },
     cash: (b) => G.cashOut(s, +b.dataset.i),
     fresh: () => { if (s.cur.t === 'end' || confirm('Abandon this career? It cannot be brought back.')) toSetup(); },
     install: () => { installEvt.prompt(); installEvt = null; },
@@ -283,7 +283,7 @@
     if (!b || b.disabled || rolling) return;
     on[b.dataset.a](b); save(); render();
   });
-  document.addEventListener('input', (e) => { if (e.target.id === 'name') draft.name = e.target.value; if (e.target.id === 'story') draft.story = e.target.value; });
+  document.addEventListener('input', (e) => { if (e.target.id === 'name') draft.name = e.target.value; if (e.target.id === 'story') draft.story = e.target.value; if (e.target.id === 'country') draft.country = e.target.value; });
   addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (s && tab === 'record') render(); });
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js');
 

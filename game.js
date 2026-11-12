@@ -4,6 +4,8 @@
   const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
   const pick = (a) => a[Math.floor(R() * a.length)];
   const clamp = (v, a = 0, b = 100) => Math.max(a, Math.min(b, v));
+  const ord = (n) => n + (n % 100 > 10 && n % 100 < 14 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+  const shuffle = (a) => a.slice().sort(() => R() - 0.5);
   const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
 
   const KEYS = ['sho', 'drv', 'pas', 'def', 'ath', 'cmp'];
@@ -13,15 +15,10 @@
     bb: {
       name: 'Basketball',
       stats: { sho: 'Shooting', drv: 'Finishing', pas: 'Playmaking', def: 'Defense', ath: 'Athleticism', cmp: 'Composure' },
-      arch: [
-        { id: 'sniper', n: 'Sharpshooter', d: 'Lives behind the arc. Defence is a rumour.', m: { sho: 8, def: -4 } },
-        { id: 'general', n: 'Floor General', d: 'Sees the pass before it exists.', m: { pas: 8, drv: -4 } },
-        { id: 'enforcer', n: 'Enforcer', d: 'Nobody scores easy on your watch.', m: { def: 8, sho: -4 } },
-      ],
       teams: [null, ['Harbor City Kings', 'Northgate Comets'], ['Redwater Foxes', 'Lakeshore Herons'], ['Dustbowl Coyotes', 'Port Azure Gulls']],
       body: { tall: 81, short: 75, mods: { tall: { drv: 3, def: 3, ath: -3, sho: -2 }, short: { ath: 3, pas: 2, drv: -2, def: -2 }, mid: {} } },
       mvp: 'MVP', star: 'All-Star', title: 'champions', final: 'The Finals', entry: 'Draft night', joined: 'Drafted by the {team}.', mid: 'went out in the play-offs',
-      entryText: (t) => `With the eleventh pick, the ${t} take a chance on you. A four-year rookie deal and a locker by the door.`,
+      entryText: (t, n) => `With the ${ord(n)} pick, the ${t} take a chance on you. ${n <= 30 ? 'A four-year rookie deal and a locker by the door.' : 'A two-way contract and a lot to prove.'}`,
       base: (us, them) => [ri(86, 92) + Math.round((us - 70) / 2), ri(86, 92) + Math.round((them - 70) / 2)],
       line: (st, mf, w) => {
         const p = Math.max(2, w[0] * mf * ((st.sho + st.drv) / 2 - 45) * 0.62 + ri(-15, 15) / 10);
@@ -38,8 +35,14 @@
         { id: 'C', n: 'Centre', d: 'You own the paint. Everyone else is visiting.', m: { def: 3, drv: 1, sho: -4 }, att: 0.45, off: ['post', 'glass', 'kick'], def: ['block', 'contest', 'box'], w: [0.9, 1.9, 0.7] },
       ],
       sit: {
-        off: ['Shot clock at eight.', 'Fast break, two against one.', 'Out of the timeout, the play is drawn for you.', 'A switch leaves {star} on you.', 'Late in the clock, the ball swings your way.', 'You catch it at the elbow, facing up.', 'A loose ball bounces your way.', 'Their run has to stop. The crowd is on its feet.'],
-        def: ['{star} isolates at the top of the key.', 'The pick and roll comes straight at you.', 'They push it in transition, {star} leading the break.', '{star} curls off a screen.', 'They clear out the side for {star}.', 'A drive and kick. {star} catches it on the wing.'],
+        // [what is happening, the moves that fit it]
+        off: [['Shot clock at eight.', ['three', 'pullup', 'drive']], ['Fast break, two against one.', ['drive', 'cutter', 'three']], ['Out of the timeout, the play is drawn for you.', ['three', 'pullup', 'post']],
+          ['A switch leaves {star} on you.', ['post', 'drive', 'pullup']], ['Late in the clock, the ball swings your way.', ['three', 'kick', 'pullup']], ['You catch it at the elbow, facing up.', ['pullup', 'drive', 'cutter']],
+          ['A shot clangs off the rim and the ball is loose.', ['glass', 'kick']], ['Their run has to stop. The crowd is on its feet.', ['three', 'drive', 'post']],
+          ['They pack the paint and dare you to shoot.', ['three', 'kick', 'pullup']], ['You get the ball deep on the block.', ['post', 'kick']]],
+        def: [['{star} isolates at the top of the key.', ['contest', 'steal', 'charge']], ['The pick and roll comes straight at you.', ['steal', 'contest', 'block']], ['They push it in transition, {star} leading the break.', ['charge', 'block', 'steal']],
+          ['{star} curls off a screen.', ['contest', 'steal']], ['They clear out the side for {star}.', ['contest', 'charge', 'block']], ['A drive and kick. {star} catches it on the wing.', ['contest', 'steal']],
+          ['A shot goes up. {star} is crashing the glass.', ['box', 'block']], ['{star} backs you down in the post.', ['contest', 'charge', 'block']]],
         level: 'Tied. {secs} seconds left. The ball is in your hands.',
         behind: 'Down {gap}. {secs} seconds left. The ball is in your hands.',
         ahead: 'Up {gap}. {secs} seconds left. {star} wants the last shot, and you are guarding him.',
@@ -65,15 +68,10 @@
     soc: {
       name: 'Soccer',
       stats: { sho: 'Shooting', drv: 'Dribbling', pas: 'Passing', def: 'Defending', ath: 'Pace', cmp: 'Composure' },
-      arch: [
-        { id: 'poacher', n: 'Poacher', d: 'One touch, one goal. Tracks back never.', m: { sho: 8, def: -4 } },
-        { id: 'maker', n: 'Playmaker', d: 'The game slows down around you.', m: { pas: 8, ath: -4 } },
-        { id: 'destroyer', n: 'Destroyer', d: 'Wins the ball, and the argument.', m: { def: 8, sho: -4 } },
-      ],
       teams: [null, ['Castellan CF', 'Northgate Athletic'], ['Redwater Rovers', 'Lakeshore United'], ['Dunmore Town', 'Port Azure FC']],
       body: { tall: 188, short: 174, mods: { tall: { def: 3, sho: 1, ath: -3 }, short: { ath: 3, drv: 3, def: -3 }, mid: {} } },
       mvp: 'Player of the Year', star: 'Team of the Season', title: 'champions', final: 'The Cup Final', entry: 'Signing day', joined: 'Signed by {team} from the academy.', mid: 'finished in the top half',
-      entryText: (t) => `${t} sign you from the academy. A four-year deal, the number 27 shirt and a seat at the back of the bus.`,
+      entryText: (t, n) => `${t} sign you from the academy. A four-year deal, the number 27 shirt and a seat at the back of the bus.`,
       base: (us, them) => [(R() < 0.3 + (us - 70) / 100 ? 1 : 0), (R() < 0.4 + (them - 70) / 100 ? 1 : 0)],
       line: (st, mf, w) => {
         const g = Math.max(0, Math.round(w[0] * mf * (st.sho * 0.6 + st.drv * 0.4 - 50) * 0.75 + ri(-2, 2)));
@@ -88,8 +86,13 @@
         { id: 'DF', n: 'Defender', d: 'Clean sheets, last-ditch blocks and the odd set-piece goal.', m: { def: 4, sho: -3, drv: -1 }, att: 0.3, off: ['header', 'carry', 'switch'], def: ['hold', 'slide', 'intercept'], w: [0.25, 0.4] },
       ],
       sit: {
-        off: ['You pick the ball up between the lines.', 'A counter-attack, three against two.', '{star} shows you the outside.', 'A loose ball drops to you on the edge of the box.', 'A corner. The box is crowded.', 'A quick throw-in. They switch off for a second.', 'Their keeper shanks a clearance. It falls to you.', 'A one-two on the edge of the area.'],
-        def: ['{star} runs straight at you.', 'A ball in behind, and {star} is chasing it.', '{star} turns in the pocket.', 'A cross is coming. {star} is lurking at the back post.', 'They break three against two. {star} has the ball.', '{star} drops a shoulder on the edge of the box.'],
+        off: [['You pick the ball up between the lines.', ['thread', 'takeon', 'longshot']], ['A counter-attack, three against two.', ['takeon', 'thread', 'shoot']], ['{star} shows you the outside.', ['takeon', 'cross']],
+          ['A loose ball drops to you on the edge of the box.', ['shoot', 'longshot']], ['A corner. The box is crowded.', ['header']], ['A quick throw-in. They switch off for a second.', ['thread', 'cross', 'takeon']],
+          ['Their keeper shanks a clearance. It falls to you.', ['longshot', 'switch', 'carry']], ['A one-two on the edge of the area.', ['shoot', 'thread']],
+          ['They sit deep. Nobody closes you down.', ['switch', 'carry', 'longshot']], ['A free kick, twenty-five yards out.', ['shoot', 'cross', 'header']]],
+        def: [['{star} runs straight at you.', ['slide', 'hold', 'track']], ['A ball in behind, and {star} is chasing it.', ['track', 'slide']], ['{star} turns in the pocket.', ['intercept', 'hold', 'press']],
+          ['A cross is coming. {star} is lurking at the back post.', ['track', 'hold']], ['They break three against two. {star} has the ball.', ['hold', 'slide', 'intercept']], ['{star} drops a shoulder on the edge of the box.', ['hold', 'slide']],
+          ['Their keeper takes his time on the ball.', ['press', 'intercept']], ['They play it short from a corner.', ['press', 'intercept', 'track']]],
         level: 'Ninetieth minute, level. The ball breaks to you.',
         behind: 'Stoppage time, a goal down. One last chance falls to you.',
         ahead: 'Stoppage time, a goal up. {star} breaks through and only you are back.',
@@ -116,6 +119,22 @@
   const FIRST = ['Tunde', 'Marcus', 'Chidi', 'Leo', 'Emeka', 'Darius', 'Kofi', 'Mateo', 'Segun', 'Andre', 'Ibrahim', 'Jonas', 'Femi', 'Rafael', 'Kwame', 'Niko'];
   const LAST = ['Okafor', 'Bell', 'Adeyemi', 'Varga', 'Mensah', 'Castro', 'Balogun', 'Reyes', 'Osei', 'Lindqvist', 'Nwosu', 'Marsh', 'Diallo', 'Kovac', 'Eze', 'Santoro'];
   const PARTNERS = ['Amara', 'Zainab', 'Sofia', 'Kemi', 'Elena', 'Tolu', 'Maya', 'Ada', 'Jordan', 'Sam', 'Ife', 'Noor'];
+  // Where you are from: the food and the city colour the stories, the region picks the tournament.
+  const COUNTRIES = [
+    ['AR', 'Argentina', 'Argentine', 'asado', 'Rosario', 'sa'], ['AU', 'Australia', 'Australian', 'a meat pie', 'Melbourne', 'as'], ['BR', 'Brazil', 'Brazilian', 'feijoada', 'S\u00e3o Paulo', 'sa'],
+    ['CM', 'Cameroon', 'Cameroonian', 'ndol\u00e9', 'Douala', 'af'], ['CA', 'Canada', 'Canadian', 'poutine', 'Toronto', 'na'], ['CI', 'C\u00f4te d\u2019Ivoire', 'Ivorian', 'atti\u00e9k\u00e9', 'Abidjan', 'af'],
+    ['EG', 'Egypt', 'Egyptian', 'koshari', 'Cairo', 'af'], ['EN', 'England', 'English', 'a Sunday roast', 'Manchester', 'eu'], ['FR', 'France', 'French', 'pot-au-feu', 'Paris', 'eu'],
+    ['DE', 'Germany', 'German', 'currywurst', 'Dortmund', 'eu'], ['GH', 'Ghana', 'Ghanaian', 'waakye', 'Kumasi', 'af'], ['GR', 'Greece', 'Greek', 'moussaka', 'Athens', 'eu'],
+    ['IT', 'Italy', 'Italian', 'rag\u00f9', 'Naples', 'eu'], ['JM', 'Jamaica', 'Jamaican', 'ackee and saltfish', 'Kingston', 'na'], ['JP', 'Japan', 'Japanese', 'ramen', 'Osaka', 'as'],
+    ['KE', 'Kenya', 'Kenyan', 'ugali and sukuma', 'Nairobi', 'af'], ['LT', 'Lithuania', 'Lithuanian', 'cepelinai', 'Kaunas', 'eu'], ['MX', 'Mexico', 'Mexican', 'tacos al pastor', 'Guadalajara', 'na'],
+    ['MA', 'Morocco', 'Moroccan', 'tagine', 'Casablanca', 'af'], ['NL', 'Netherlands', 'Dutch', 'stamppot', 'Rotterdam', 'eu'], ['NG', 'Nigeria', 'Nigerian', 'jollof', 'Lagos', 'af'],
+    ['PT', 'Portugal', 'Portuguese', 'bacalhau', 'Lisbon', 'eu'], ['SN', 'Senegal', 'Senegalese', 'thieboudienne', 'Dakar', 'af'], ['RS', 'Serbia', 'Serbian', '\u0107evapi', 'Belgrade', 'eu'],
+    ['ZA', 'South Africa', 'South African', 'bunny chow', 'Soweto', 'af'], ['KR', 'South Korea', 'Korean', 'kimchi jjigae', 'Seoul', 'as'], ['ES', 'Spain', 'Spanish', 'paella', 'Seville', 'eu'],
+    ['US', 'United States', 'American', 'your mother\u2019s mac and cheese', 'Chicago', 'na'],
+  ].map(([id, n, adj, food, city, r]) => ({ id, n, adj, food, city, r }));
+  const CTRY = Object.fromEntries(COUNTRIES.map((c) => [c.id, c]));
+  const CUPS = { af: ['AFCON', 'AfroBasket'], eu: ['the Euros', 'EuroBasket'], sa: ['the Copa Am\u00e9rica', 'the AmeriCup'], na: ['the Gold Cup', 'the AmeriCup'], as: ['the Asian Cup', 'the Asia Cup'] };
+  const home = (s) => CTRY[s.country] || CTRY.NG; // saves from before countries existed already talked about jollof
   const person = () => `${pick(FIRST)} ${pick(LAST)}`;
 
   // The reel in the Draw: real players, from greats to busts, every one equally likely. The ratings are our own opinion, not official data.
@@ -167,6 +186,18 @@
       ['Ben Wallace', 'C', 30, 52, 46, 98, 88, 78, 81], ['Robert Horry', 'PF', 76, 60, 62, 76, 70, 98, 82], ['Bruce Bowen', 'SF', 72, 46, 44, 94, 74, 80, 79],
       ['Kyle Korver', 'SG', 95, 46, 58, 62, 60, 84, 79], ['J.J. Redick', 'SG', 94, 60, 66, 52, 62, 86, 76], ['Moses Malone', 'C', 50, 92, 52, 82, 88, 84, 82],
       ['Blake Griffin', 'PF', 62, 90, 82, 62, 96, 74, 81], ['Andre Iguodala', 'SF', 66, 74, 82, 92, 84, 92, 78], ['Derek Fisher', 'PG', 76, 52, 72, 72, 58, 94, 73],
+      ['Cooper Flagg', 'SF', 78, 86, 80, 88, 88, 82, 81], ['Dylan Harper', 'SG', 78, 88, 82, 72, 82, 84, 78], ['Ace Bailey', 'SF', 80, 82, 62, 66, 86, 70, 82],
+      ['VJ Edgecombe', 'SG', 74, 84, 68, 80, 96, 74, 77], ['Stephon Castle', 'PG', 66, 86, 78, 84, 86, 78, 78], ['Zaccharie Risacher', 'SF', 78, 72, 62, 72, 80, 72, 80],
+      ['Alex Sarr', 'C', 58, 74, 62, 86, 86, 66, 84], ['Reed Sheppard', 'PG', 84, 68, 76, 72, 72, 78, 74], ['Bronny James', 'PG', 56, 58, 62, 68, 74, 56, 74],
+      ['Amen Thompson', 'SG', 48, 90, 80, 88, 99, 70, 79], ['Jalen Williams', 'SF', 84, 86, 80, 84, 82, 86, 78], ['Tyrese Maxey', 'PG', 88, 90, 80, 64, 96, 86, 74],
+      ['Alperen \u015eeng\u00fcn', 'C', 58, 90, 92, 72, 66, 82, 83], ['Franz Wagner', 'SF', 78, 88, 78, 80, 80, 84, 82], ['Jaren Jackson Jr.', 'PF', 80, 76, 58, 94, 82, 76, 83],
+      ['Desmond Bane', 'SG', 90, 80, 74, 76, 76, 86, 77], ['Brandon Miller', 'SF', 86, 78, 70, 70, 80, 78, 81], ['Scoot Henderson', 'PG', 62, 82, 78, 60, 88, 62, 75],
+      ['Jalen Green', 'SG', 80, 86, 62, 56, 94, 70, 76], ['Dereck Lively II', 'C', 30, 74, 58, 88, 88, 70, 85], ['Kel\u2019el Ware', 'C', 62, 72, 48, 82, 84, 64, 84],
+      ['Jonathan Kuminga', 'PF', 62, 88, 62, 72, 94, 62, 79], ['Dalton Knecht', 'SF', 82, 70, 56, 50, 72, 68, 78], ['James Wiseman', 'C', 46, 70, 40, 62, 82, 50, 84],
+      ['Kevin Knox', 'SF', 62, 58, 46, 48, 70, 52, 81], ['Killian Hayes', 'PG', 52, 58, 72, 74, 72, 52, 77], ['Dominique Wilkins', 'SF', 78, 96, 70, 66, 99, 86, 80],
+      ['Clyde Drexler', 'SG', 80, 92, 82, 82, 94, 86, 79], ['Penny Hardaway', 'PG', 80, 90, 92, 72, 90, 84, 79], ['Grant Hill', 'SF', 72, 92, 88, 84, 90, 86, 80],
+      ['Kevin McHale', 'PF', 70, 94, 62, 88, 72, 90, 82], ['George Mikan', 'C', 50, 94, 60, 86, 70, 92, 82], ['Tony Allen', 'SG', 52, 66, 56, 96, 84, 80, 76],
+      ['Elgin Baylor', 'SF', 74, 96, 80, 72, 94, 90, 77],
     ],
     soc: [
       ['Lionel Messi', 'W', 96, 99, 96, 40, 82, 97, 170], ['Cristiano Ronaldo', 'ST', 97, 90, 82, 40, 90, 96, 187], ['Kylian Mbappé', 'ST', 93, 94, 82, 40, 99, 90, 178],
@@ -212,6 +243,19 @@
       ['Claude Makélélé', 'CM', 50, 72, 82, 94, 78, 92, 170], ['Michael Essien', 'CM', 76, 80, 80, 90, 90, 86, 178], ['Taribo West', 'DF', 48, 56, 54, 86, 84, 74, 181],
       ['Sunday Oliseh', 'CM', 80, 70, 84, 84, 74, 84, 183], ['Rashidi Yekini', 'ST', 90, 70, 56, 36, 80, 82, 190], ['Finidi George', 'W', 76, 90, 84, 40, 88, 80, 181],
       ['Daniel Amokachi', 'ST', 82, 82, 64, 40, 94, 74, 180], ['Obafemi Martins', 'ST', 82, 82, 62, 36, 98, 72, 170], ['Joseph Yobo', 'DF', 46, 54, 60, 86, 80, 82, 185],
+      ['Endrick', 'ST', 82, 84, 66, 40, 88, 72, 173], ['Arda G\u00fcler', 'CM', 84, 88, 88, 46, 72, 80, 176], ['Kobbie Mainoo', 'CM', 70, 84, 84, 78, 74, 82, 175],
+      ['Alejandro Garnacho', 'W', 78, 88, 70, 40, 92, 68, 180], ['Rasmus H\u00f8jlund', 'ST', 78, 70, 58, 44, 88, 68, 191], ['Warren Za\u00efre-Emery', 'CM', 72, 82, 82, 82, 80, 82, 178],
+      ['D\u00e9sir\u00e9 Dou\u00e9', 'W', 80, 90, 82, 46, 86, 76, 181], ['Michael Olise', 'W', 86, 90, 88, 40, 80, 82, 184], ['Xavi Simons', 'CM', 80, 88, 84, 50, 82, 78, 179],
+      ['Benjamin \u0160e\u0161ko', 'ST', 84, 74, 62, 40, 90, 72, 195], ['Viktor Gy\u00f6keres', 'ST', 90, 82, 66, 46, 88, 84, 187], ['Alexander Isak', 'ST', 90, 90, 74, 40, 88, 84, 192],
+      ['Jo\u0161ko Gvardiol', 'DF', 66, 78, 80, 88, 84, 84, 185], ['Pau Cubars\u00ed', 'DF', 44, 70, 84, 86, 74, 88, 184], ['Dean Huijsen', 'DF', 52, 74, 82, 84, 76, 82, 197],
+      ['Est\u00eav\u00e3o', 'W', 80, 90, 78, 36, 88, 74, 176], ['Dominik Szoboszlai', 'CM', 86, 82, 88, 70, 84, 82, 186], ['Bryan Mbeumo', 'W', 86, 84, 82, 48, 82, 84, 171],
+      ['Mohammed Kudus', 'W', 80, 90, 78, 52, 86, 76, 177], ['Akor Adams', 'ST', 78, 72, 58, 44, 86, 70, 185], ['Tolu Arokodare', 'ST', 76, 62, 58, 46, 74, 70, 197],
+      ['Antony', 'W', 70, 82, 66, 40, 84, 52, 172], ['Mykhailo Mudryk', 'W', 62, 80, 58, 36, 96, 50, 175], ['Ansu Fati', 'W', 74, 80, 70, 36, 74, 58, 178],
+      ['Nicolas Jackson', 'ST', 76, 80, 62, 40, 92, 58, 186], ['Jadon Sancho', 'W', 72, 88, 82, 40, 78, 66, 180], ['Johan Cruyff', 'ST', 90, 98, 94, 46, 90, 96, 180],
+      ['Franz Beckenbauer', 'DF', 70, 84, 92, 96, 80, 99, 181], ['Eus\u00e9bio', 'ST', 96, 92, 80, 40, 96, 90, 175], ['Marco van Basten', 'ST', 97, 86, 80, 40, 82, 94, 188],
+      ['Roberto Baggio', 'ST', 92, 94, 92, 40, 80, 94, 174], ['Ryan Giggs', 'W', 80, 94, 86, 50, 90, 88, 179], ['Abedi Pel\u00e9', 'CM', 84, 94, 88, 50, 86, 88, 173],
+      ['Roger Milla', 'ST', 90, 86, 74, 36, 78, 92, 176], ['Rivaldo', 'W', 92, 94, 88, 40, 82, 88, 186], ['Andriy Shevchenko', 'ST', 95, 88, 78, 40, 92, 90, 183],
+      ['Beb\u00e9', 'W', 52, 62, 46, 30, 72, 36, 190], ['Eric Djemba-Djemba', 'CM', 44, 52, 58, 64, 70, 44, 175], ['Kerlon', 'W', 52, 80, 50, 30, 70, 40, 172],
     ],
   };
   const pAvg = (p) => avg(p.slice(2, 8));
@@ -222,7 +266,10 @@
   const ovr = (s) => Math.round(avg(KEYS.map((k) => s.st[k])));
   const worth = (s) => s.money + s.inv.reduce((t, i) => t + i.amt, 0);
   const cfg = (s) => SPORTS[s.sport];
-  const tx = (s, str) => str.replace(/\{(\w+)\}/g, (_, k) => (k === 'partner' ? (s.partner ? s.partner.name : 'your partner') : k === 'team' ? s.team : k === 'name' ? s.name : s.names[k]));
+  function tx(s, str) {
+    const C = home(s), v = { team: s.team, name: s.name, partner: s.partner ? s.partner.name : 'your partner', country: C.n, adj: C.adj, food: C.food, city: C.city, cup: CUPS[C.r][s.sport === 'bb' ? 1 : 0] };
+    return str.replace(/\{(\w+)\}/g, (_, k) => (k in v ? v[k] : s.names[k]));
+  }
   const say = (s, t) => { s.log.push({ a: s.age, t: tx(s, t) }); if (s.log.length > 80) s.log.shift(); };
 
   // Apply stat changes; returns [label, amount] pairs for the outcome card.
@@ -418,12 +465,12 @@
       ['Wait it out', 'You miss the first month and watch from the stands.', { coach: -8, morale: -8, cmp: 1 }],
     ] },
     { id: 'homesick', when: (s) => s.origin === 'abroad' && s.morale < 62, title: 'Three in the morning, back home', text: 'It is your grandmother’s birthday. The whole family is on a video call, and you are in a hotel in a city you cannot pronounce.', c: [
-      ['Fly home for two days', 'Jollof, noise, your old bed. You come back lighter.', { morale: 18, coach: -6, health: -4 }],
+      ['Fly home for two days', '{food}, noise, your old bed. You come back lighter.', { morale: 18, coach: -6, health: -4 }],
       ['Stay and train', 'You hang up and go to the gym. It is what you came here for.', { cmp: 2, morale: -6 }],
       ['Bring the family over', 'Six tickets and a bigger flat. The loneliness stops.', { money: -120, morale: 22 }],
     ] },
     { id: 'flag', once: 1, when: (s) => s.origin === 'abroad' && s.seasons.length >= 2 && ovr(s) >= 76, title: 'Two flags', text: 'Both countries want you: the one you left, and the one that made you a player.', c: [
-      ['The country you left', 'The airport is full when you land. Children are wearing your name.', { fame: 10, morale: 12 }],
+      ['Play for {country}', 'The airport is full when you land. Children are wearing your name.', { fame: 10, morale: 12 }],
       ['The country you live in', 'A better squad and a bigger stage. Back home, some call you a traitor.', { fame: 6, money: 150, morale: -6 }],
     ] },
     { id: 'crew', once: 1, when: (s) => s.origin === 'bottom' && s.fame > 28, title: 'The boys from the block', text: 'Four friends from home arrive with suitcases. They say they are your team now.', c: [
@@ -455,6 +502,80 @@
       ['Stay till closing', 'A great night. A terrible morning.', { mates: 10, coach: -10, health: -8 }],
     ] },
   );
+  EVENTS.push(
+    { id: 'callup', once: 1, when: (s) => s.seasons.length >= 1 && ovr(s) >= 68, title: '{country} come calling', text: 'The {adj} federation want you in the squad for {cup}. Say yes and the summer off is gone.', c: [
+      ['Answer the call', 'You pull on the shirt for the first time and sing every word of the anthem.', { fame: 8, cmp: 2, health: -8, morale: 8 }, (s) => { s.f.capped = 1; }],
+      ['Ask to sit this one out', 'The radio phone-ins in {city} talk about nothing else for a week.', { health: 10, fame: -6, morale: -4 }],
+    ] },
+    { id: 'tourney', when: (s) => s.f.capped && s.seasons.length % 2 === 0, title: '{cup}', text: 'A semi-final, and the whole of {country} has stopped work to watch. The last chance falls to you.', c: [
+      ['Take it yourself', 'You do not think.', {}, (s) => (R() < 0.35 + (ovr(s) - 70) / 60 ? ['It goes in. In {city} they are dancing on car roofs.', { fame: 12, morale: 14, cmp: 2 }] : ['It goes wide. You sit on the grass for a long time.', { morale: -14, fame: -4 }])],
+      ['Find a teammate', 'You draw two and pass. He scores and he is the hero. You are fine with that, mostly.', { cmp: 2, morale: 4 }],
+    ] },
+    { id: 'world', once: 1, when: (s) => s.f.capped && ovr(s) >= 80 && s.seasons.length >= 4, title: 'The World Cup', text: '{country} have never gone further than the quarter-finals. This time they have you.', c: [
+      ['Play every minute', 'You run until your legs stop listening.', { health: -18 }, (s) => (R() < 0.4 ? ['A semi-final. Nobody in {country} sleeps that night.', { fame: 16, morale: 16 }] : ['Out in the last sixteen. You gave everything.', { fame: 6, morale: -6 }])],
+      ['Save yourself for your club', 'You play the group games and sit out the rest. Your club are grateful. {city} is not.', { fame: -8, coach: 8, health: 6 }],
+    ] },
+    { id: 'homecoming', once: 1, when: (s) => s.fame > 40, title: 'Back in {city}', text: 'You go home for the summer. Someone has painted your face on the wall where you learned to play.', c: [
+      ['Run a free camp for kids', 'Two hundred kids and a lot of shouting. One of them is better than you were.', { money: -20, morale: 12, fame: 4 }, (s) => { s.f.gaveBack = 1; }],
+      ['Stay in and eat {food}', 'Three weeks of sleep and home cooking. You go back heavier and happier.', { health: 10, morale: 10, ath: -1 }],
+      ['Throw a party for the street', 'The music stops at six in the morning. Your mother is still dancing.', { money: -60, fame: 6, morale: 10 }],
+    ] },
+    { id: 'parcel', when: (s) => s.seasons.length >= 1, title: 'A parcel from home', text: 'Your aunt has posted {food} halfway round the world. It arrives slightly crushed and smelling wonderful.', c: [
+      ['Share it with the squad', 'Half the dressing room want the recipe. {mate} has thirds.', { mates: 8, morale: 6 }],
+      ['Eat it alone at midnight', 'Standing at the kitchen counter, in the dark. Perfect.', { morale: 10 }],
+    ] },
+    { id: 'politician', once: 1, when: (s) => s.fame > 50, title: 'Election season', text: 'A politician in {country} wants a photo with you. He promises {city} a new stadium if he wins.', c: [
+      ['Take the photo', 'The stadium is never built. Half of {city} has an opinion about you now.', { fame: 4, money: 30, morale: -6 }],
+      ['Politely decline', 'Your agent breathes out.', { cmp: 1 }],
+      ['Speak out against him', 'The clip goes everywhere. Your mother asks you to be careful.', { fame: 8, morale: 4 }],
+    ] },
+    { id: 'homeclub', once: 1, when: (s) => s.age >= 31 && s.tier > 1, title: 'Coming home', text: 'A club in {city} wants you for your last years. Less money, a lot of love, and your mother at every game.', c: [
+      ['Go home', 'Half the city comes to the airport.', { morale: 20, fame: 4 }, (s) => { moveTeam(s, 3); s.team = `${home(s).city} ${s.sport === 'bb' ? 'Royals' : 'United'}`; s.salary = Math.round(s.salary * 0.6); s.f.gaveBack = 1; }],
+      ['Not yet', 'You tell them maybe one day. Everyone knows what that means.', { morale: -3 }],
+    ] },
+    { id: 'agent', once: 1, when: (s) => s.seasons.length === 0, title: 'Two agents', text: 'A man with a very big watch wants to represent you. So does your uncle, who has read one book about contracts.', c: [
+      ['The big watch', 'He gets you a boot deal by Friday and takes twenty per cent.', { money: 80, morale: -2 }],
+      ['Your uncle', 'He reads every clause out loud, twice. Nobody cheats you.', { morale: 6, cmp: 1 }],
+    ] },
+    { id: 'viral', when: (s) => s.fame > 25, title: 'Forty million views', text: 'Someone filmed you dancing in the dressing room after a win. The internet has decided it is the best thing it has ever seen.', c: [
+      ['Lean into it', 'A brand wants the dance in an advert. {coach} wants you to watch some film.', { fame: 8, money: 40, coach: -4 }],
+      ['Log off for a month', 'It is very quiet. You sleep better.', { cmp: 2, fame: -2 }],
+    ] },
+    { id: 'loan', when: (s) => s.money > 200, title: 'A favour', text: '{mate} needs money. He says it is only until his next contract.', c: [
+      ['Lend him $80k', 'You transfer it that night.', { money: -80 }, (s) => (R() < 0.5 ? ['He pays you back early, with a watch on top. A friend for life.', { money: 90, mates: 10 }] : ['His next contract never comes. Neither does the money.', { mates: -4, morale: -4 }])],
+      ['Say no', 'He nods. The bus is a little cooler for a while.', { mates: -6 }],
+    ] },
+    { id: 'move', once: 1, when: (s) => s.seasons.length >= 2, title: 'A new role', text: '{coach} thinks you are in the wrong position and wants to move you.', c: [
+      ['Try it', 'You agree to a month.', { coach: 10 }, (s) => { const P = cfg(s).pos, i = P.findIndex((p) => p.id === s.pos), j = i === 0 ? 1 : i === P.length - 1 ? i - 1 : i + (R() < 0.5 ? -1 : 1); s.pos = P[j].id; return [`A month becomes for good. You are a ${P[j].n.toLowerCase()} now.`, {}]; }],
+      ['Refuse', 'You tell him you know who you are. He writes something down.', { coach: -12, cmp: 1 }],
+    ] },
+    { id: 'fan', when: (s) => s.fame > 20, title: 'After the game', text: 'A boy in a {adj} shirt has waited three hours in the rain by the team bus. He is holding a drawing of you.', c: [
+      ['Stop and talk', 'You sign the drawing, his shirt and his mum\u2019s arm. He will remember this when he is forty.', { morale: 8, fame: 2 }],
+      ['Wave from the bus', 'The bus pulls away. You see his face in the window for a long time.', { morale: -4 }],
+    ] },
+    { id: 'mum', when: (s) => s.seasons.length >= 1 && s.morale < 50, title: 'A call from home', text: 'Your mother has seen the papers. She does not ask about the game. She asks if you are eating.', c: [
+      ['Tell her the truth', 'You talk for an hour and feel twelve years old, in a good way.', { morale: 14 }],
+      ['Say everything is fine', 'She knows. She lets you have it.', { morale: 3 }],
+    ] },
+    { id: 'flats', once: 1, when: (s) => s.money > 400, title: 'Bricks and mortar', text: 'A developer in {city} is selling a block of flats. He wants $400k and a photo for the brochure.', c: [
+      ['Buy the block', 'Forty flats, a caretaker and a lot of paperwork. The rent comes in every year.', { money: -400 }, (s) => { s.inv.push({ n: 'Flats in ' + home(s).city, amt: 400, kind: 'prop' }); }],
+      ['Pass', 'Your adviser says you dodged one. Or missed one. He is not sure.', {}],
+    ] },
+    { id: 'coin', when: (s) => s.money > 150 && s.fame > 30, title: 'Your own coin', text: 'Some men in hoodies want to launch a crypto coin with your face on it. You would not have to do anything, they say.', c: [
+      ['Put your face on it', 'It rises for nine days, then it does not.', { money: 120 }, (s) => (R() < 0.6 ? ['The fans who bought in lost everything. They remember your face.', { fame: -12, morale: -10 }] : ['You sold in time. You try not to think about who bought.', { morale: -4 }])],
+      ['Show them the door', 'They try a teammate next. He says yes.', { cmp: 1 }],
+    ] },
+    { id: 'franchise', once: 1, when: (s) => s.money > 250, title: 'A franchise', text: 'A chicken chain wants a famous partner for its first ten restaurants in {country}.', c: [
+      ['Buy in for $250k', 'Your face goes on the menu boards. The chicken is fine.', { money: -250, fame: 3 }, (s) => { s.inv.push({ n: 'Chicken franchise', amt: 250, kind: 'franchise' }); }],
+      ['Not your thing', 'You stick to the day job.', {}],
+    ] },
+    { id: 'after', when: () => false, title: 'What next?', text: 'The boots are off for good. You have a phone full of offers and the whole rest of your life.', c: [
+      ['Become a coach', 'You start with the under-16s in {city}.', {}, (s) => (R() < 0.3 + s.st.cmp / 300 ? ['Five years later you are a head coach, and your players say you are fair.', { fame: 6 }] : ['It turns out explaining it is harder than doing it. You go back to the youth teams, happily.', { morale: 4 }])],
+      ['Go into television', 'Suits, opinions and a catchphrase you come to regret.', { fame: 8, money: 300 }],
+      ['Buy into a club', 'You make the call.', {}, (s) => (s.money >= 1500 ? (s.money -= 1500, s.inv.push({ n: 'Club stake', amt: 1500, kind: 'prop' }), ['You buy a stake in a club in {city}. The fans sing your name at the first game.', { fame: 6, morale: 10 }]) : ['They laugh politely. A club costs more than you have.', { morale: -4 }])],
+      ['Disappear and enjoy it', 'A long table, family, {food}. Nobody asks you about the game.', { morale: 20 }],
+    ] },
+  );
   const EV = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
   const ARC = Object.fromEntries(ARCS.map((a) => [a.id, a]));
 
@@ -468,9 +589,9 @@
   }
 
   // ---------- career start ----------
-  function create({ name, sport, arch, pos, origin, story, look }) {
+  function create({ name, sport, pos, country, origin, story, look }) {
     const s = {
-      v: 3, pos: SPORTS[sport].pos.some((p) => p.id === pos) ? pos : SPORTS[sport].pos[0].id, cap: {}, src: {}, h: 0, look: Object.assign({ skin: 4, hair: 'fade', beard: 0, band: 0 }, look), name: (name || '').trim().slice(0, 18) || 'The Kid', sport, arch, age: 18,
+      v: 3, country: CTRY[country] ? country : 'NG', pos: SPORTS[sport].pos.some((p) => p.id === pos) ? pos : SPORTS[sport].pos[0].id, cap: {}, src: {}, h: 0, look: Object.assign({ skin: 4, hair: 'fade', beard: 0, band: 0 }, look), name: (name || '').trim().slice(0, 18) || 'The Kid', sport, age: 18,
       st: {}, coach: 55, mates: 50, morale: 60, fame: 5, health: 85, heat: 40, money: 20,
       partner: null, inv: [], f: {}, seen: {}, log: [], seasons: [], grades: [], days: 2, note: '',
       names: { coach: person(), mate: person(), rival: person(), exCoach: '' },
@@ -518,20 +639,21 @@
   const fmtH = (sport, h) => (sport === 'bb' ? Math.floor(h / 12) + '\u2032' + (h % 12) + '\u2033' : (h / 100).toFixed(2) + ' m');
 
   function signUp(s) {
-    const m = Object.assign({}, cfg(s).arch.find((x) => x.id === s.arch).m);
+    const m = {};
     for (const add of [ORIG[s.origin].st, cfg(s).body.mods[build(s)], posOf(s).m]) for (const k in add) m[k] = (m[k] || 0) + add[k];
     for (const k in m) { s.st[k] = clamp(s.st[k] + m[k], 30, 99); s.cap[k] = clamp(s.cap[k] + m[k], 30, 99); }
     const o = ovr(s);
     s.tier = o >= 74 ? 2 : 3; // good prospects still start low: room to climb
     s.team = pick(cfg(s).teams[s.tier]); s.teams = 1; s.salary = salaryFor(s.tier, o); s.peak = o;
     say(s, cfg(s).joined);
-    s.cur = { t: 'signed', text: cfg(s).entryText(s.team) };
+    s.cur = { t: 'signed', text: cfg(s).entryText(s.team, clamp(Math.round(60 - (o - 55) * 2.4), 1, 60)) };
   }
 
   // ---------- season script ----------
   function buildSeason(s) {
-    s.steps = ['arc', 'event', 'match:Opening night', 'event', 'match:Rivalry game', 'event', 'cut', 'report'];
-    s.si = -1; s.grades = []; s.days = 2; s.note = ''; s.final = null;
+    const mid = shuffle(['event', 'event', 'match:Rivalry game'].concat(R() < 0.5 ? ['event'] : []));
+    s.steps = ['arc', 'event', 'match:Opening night', ...mid, 'cut', 'report'];
+    s.si = -1; s.grades = []; s.days = 3; s.note = ''; s.final = null;
   }
 
   function teamStr(s) {
@@ -540,9 +662,10 @@
   }
 
   function advance(s) {
+    if (s.cur.t === 'event' && s.cur.id === 'after') { s.cur = { t: 'end', l: legacy(s) }; return; }
     if (s.cur.t === 'signed') buildSeason(s);
     if (s.cur.t === 'report') {
-      if (s.cur.r.last) { s.cur = { t: 'end', l: legacy(s) }; return; }
+      if (s.cur.r.last) { s.cur = { t: 'event', id: 'after' }; return; }
       s.age++; buildSeason(s);
     }
     s.si++;
@@ -556,6 +679,7 @@
       if (!id) return advance(s);
       s.cur = { t: 'event', id };
     } else if (step.startsWith('match:')) {
+      if (s.f.injured) { say(s, `${step.slice(6)}: watched from the stands.`); return advance(s); }
       s.cur = { t: 'match', m: newMatch(s, step.slice(6)) };
     } else if (step === 'cut') {
       if (teamStr(s) + ri(-5, 5) >= 81 && !s.f.injured) s.steps.splice(s.si + 1, 0, 'match:' + cfg(s).final);
@@ -579,7 +703,8 @@
     const more = extra && extra(s);
     if (Array.isArray(more)) { t = text + ' ' + more[0]; deltas = deltas.concat(ch(s, more[1])); }
     s.cur.out = { text: tx(s, t), d: deltas };
-    say(s, `${tx(s, e.title)}: ${label.toLowerCase().replace(/[“”]/g, '')}.`);
+    if (e.id === 'after') s.after = s.cur.out.text;
+    say(s, `${tx(s, e.title)}: ${tx(s, label).toLowerCase().replace(/[“”]/g, '')}.`);
   }
 
   // ---------- matches: a handful of timed moments, each one against a real player ----------
@@ -599,10 +724,16 @@
     return `Q${q} ${mm}:${String(Math.floor((left - mm) * 60)).padStart(2, '0')}`;
   }
 
+  // The moves on offer: up to two that fit what is happening, topped up with your position's own, in a fresh order.
+  function moves(s, k, fit = []) {
+    const ids = [...new Set([...shuffle(fit.filter((id) => cfg(s).opts[id])).slice(0, 2), ...shuffle(posOf(s)[k])])].slice(0, R() < 0.25 ? 2 : 3);
+    return shuffle(ids);
+  }
+
   function moment(s, m, k, f) {
-    const c = cfg(s), vs = foe(s, m.tier, k === 'def');
+    const c = cfg(s), vs = foe(s, m.tier, k === 'def'), [what, fit] = pick(c.sit[k]);
     const dbl = k === 'off' && R() < (s.fame - 40) / 150; // once you are famous, they send two
-    return { k, vs, dbl, f, clock: clock(s, f), x: ri(22, 78), text: pick(c.sit[k]).replace('{star}', vs[0]) + (dbl ? ' ' + c.sit.dbl : '') };
+    return { k, vs, dbl, f, o: moves(s, k, dbl ? fit.concat('kick') : fit), clock: clock(s, f), x: ri(22, 78), text: what.replace('{star}', vs[0]) + (dbl ? ' ' + c.sit.dbl : '') };
   }
 
   function newMatch(s, kind) {
@@ -627,7 +758,7 @@
     if (Math.abs(gap) > (s.sport === 'bb' ? 3 : 1)) { m.moments[m.i] = moment(s, m, R() < posOf(s).att ? 'off' : 'def', 0.92 + R() * 0.07); return; }
     const k = gap > 0 ? 'def' : 'off', vs = foe(s, Math.max(0, m.tier - 1), k === 'def'), secs = ri(4, 12);
     const text = c.sit[gap > 0 ? 'ahead' : gap < 0 ? 'behind' : 'level'].replace('{gap}', Math.abs(gap)).replace('{secs}', secs).replace('{star}', vs[0]);
-    m.moments[m.i] = { k, vs, clutch: 1, dbl: false, f: 1, x: ri(30, 70), text, clock: s.sport === 'bb' ? `Q4 0:${String(secs).padStart(2, '0')}` : `90+${ri(1, 5)}′` };
+    m.moments[m.i] = { k, vs, o: moves(s, k), clutch: 1, dbl: false, f: 1, x: ri(30, 70), text, clock: s.sport === 'bb' ? `Q4 0:${String(secs).padStart(2, '0')}` : `90+${ri(1, 5)}′` };
   }
 
   // The score on screen grows with the clock; m.us and m.them are what it will be at full time.
@@ -636,9 +767,9 @@
     return [Math.round(m.us - (m.bu || 0) * (1 - f)), Math.round(m.them - (m.bt || 0) * (1 - f))];
   }
 
-  function optsFor(s, kind) {
+  function optsFor(s, mo) {
     const c = cfg(s);
-    return posOf(s)[kind === 'def' ? 'def' : 'off'].map((id) => (id === 'drive' && build(s) === 'tall'
+    return (mo.o || posOf(s)[mo.k === 'def' ? 'def' : 'off']).filter((id) => c.opts[id]).map((id) => (id === 'drive' && build(s) === 'tall'
       ? Object.assign({}, c.opts[id], { l: 'Rise up and dunk', ok: 'You hammer it down. The bench is on its feet.', no: 'Met at the rim and sent back.', bonus: 4 })
       : c.opts[id]));
   }
@@ -659,13 +790,13 @@
 
   function pickOpt(s, i) {
     const m = s.cur.m, mo = m.moments[m.i];
-    m.opt = i; m.z = zone(s, optsFor(s, mo.k)[i], mo);
+    m.opt = i; m.z = zone(s, optsFor(s, mo)[i], mo);
   }
 
   // pos is where the marker stopped, 0 to 100; t is ms since the meter started.
   function stop(s, pos, t = 0) {
     const m = s.cur.m, mo = m.moments[m.i], z = m.z;
-    const o = optsFor(s, mo.k)[m.opt];
+    const o = optsFor(s, mo)[m.opt];
     const dist = Math.abs(pos - zoneAt(z, t));
     z.marks.push(dist <= z.g / 2 ? 'g' : dist <= z.g / 2 + z.y ? 'y' : 'r');
     if (z.marks.length < z.need) { const lo = Math.ceil(z.g / 2 + z.y); z.c = ri(lo, 100 - lo); return; } // second touch, somewhere new
@@ -734,6 +865,10 @@
       const before = i.amt;
       if (i.kind === 'idx') i.amt = Math.round(i.amt * (1.04 + R() * 0.06));
       else if (i.kind === 'prop') i.amt = Math.round(i.amt * (R() < 0.12 ? 0.8 : 1.09));
+      else if (i.kind === 'bond') i.amt = Math.round(i.amt * 1.03);
+      else if (i.kind === 'car') i.amt = Math.round(i.amt * 0.85);
+      else if (i.kind === 'crypto') { const r = R(); i.amt = Math.round(i.amt * (r < 0.15 ? 3 : r < 0.5 ? 1.2 : 0.45)); }
+      else if (i.kind === 'franchise') { if (R() < 0.08) { i.amt = Math.round(i.amt * 0.5); notes.push(`Half the ${i.n.toLowerCase()} branches closed.`); } s.money += Math.round(i.amt * 0.1); }
       else if (i.kind === 'brand') i.amt = Math.round(i.amt * (0.85 + s.fame / 150));
       else if (i.kind === 'resto') { if (R() < 0.22) { notes.push(`${i.n} closed. ${money(before)} gone.`); return false; } s.money += Math.round(i.amt * 0.12); }
       else if (i.kind === 'vc') {
@@ -769,6 +904,13 @@
     date: { n: 'Time with your partner', need: (s) => !!s.partner, run: (s) => ['No phones. A whole evening.', { bond: 14, morale: 4 }] },
     gym: { n: 'Extra session', need: () => true, run: (s) => { const k = pick(KEYS); return ['Alone in the gym after dark.', { [k]: 1, health: -6 }]; } },
     rest: { n: 'Rest day', need: () => true, run: (s) => ['Feet up. Ice bath. Nothing else.', { health: 15, morale: 3 }] },
+    dating: { n: 'Go on a date', need: (s) => !s.partner && s.age >= 19, run: (s) => (R() < 0.4 ? (s.partner = { name: pick(PARTNERS), bond: 50, kind: 'date' }, ['It goes well. You see {partner} again, and again.', { morale: 8 }]) : ['Polite conversation and a split bill.', {}]) },
+    family: { n: 'Visit family', need: () => true, run: (s) => ['{food} on the table and everyone talking at once.', { morale: 10, health: 3 }] },
+    party: { n: 'Hit the clubs', need: () => true, run: (s) => (R() < 0.25 ? ['Someone had a camera. The photos are online by morning.', { morale: 4, fame: 3, coach: -8, health: -6 }] : ['A great night, and nobody saw a thing.', { morale: 10, health: -6 }]) },
+    charity: { n: 'Charity visit', need: () => true, run: (s) => ['A children\u2019s ward and a bag of signed shirts. You sit with one kid for an hour.', { fame: 3, morale: 6, money: -10 }] },
+    post: { n: 'Post online', need: () => true, run: (s) => (R() < 0.3 ? ['It goes viral for the wrong reasons.', { fame: 4, coach: -5, morale: -4 }] : ['A training clip. People like it.', { fame: 3 }]) },
+    mind: { n: 'See a sports psychologist', need: (s) => s.money >= 15, run: (s) => ['An hour about pressure. Some of it sticks.', { cmp: 1, morale: 6, money: -15 }] },
+    coach1: { n: 'Hire a private coach ($60k)', need: (s) => s.money >= 60, run: (s) => { const k = KEYS.reduce((a, b) => (s.st[a] <= s.st[b] ? a : b)); return ['A week of drills on your weakest part.', { [k]: 2, money: -60 }]; } },
   };
   function act(s, id) {
     const a = ACTS[id];
@@ -782,13 +924,27 @@
     idx: { n: 'Index fund', d: 'Dull. Grows a few per cent a year.' },
     prop: { n: 'Property', d: 'Steady, with the odd bad year.' },
     vc: { n: 'Start-up stake', d: 'Usually worth nothing. Sometimes six times over.' },
+    bond: { n: 'Government bonds', d: 'Safe and slow. About three per cent.' },
+    crypto: { n: 'Crypto', d: 'Up a lot, down a lot. Mostly down.' },
   };
   function invest(s, kind) {
     const amt = Math.floor(s.money / 4);
     if (amt < 10) return;
     s.money -= amt;
-    const have = s.inv.find((i) => i.kind === kind && kind !== 'vc');
+    const have = s.inv.find((i) => i.kind === kind && i.n === FUNDS[kind].n && kind !== 'vc');
     if (have) have.amt += amt; else s.inv.push({ n: FUNDS[kind].n, amt, kind });
+  }
+  const BUY = {
+    car: { n: 'A fast car', cost: 150, kind: 'car', d: 'Loses value every year. Feels incredible.', fx: { fame: 3, morale: 6 } },
+    house: { n: 'A house of your own', cost: 600, kind: 'prop', d: 'Somewhere that is yours. Usually goes up.', fx: { morale: 10 } },
+    parents: { n: 'A house for your parents', cost: 300, d: 'Not an investment. Worth it anyway.', fx: { morale: 18 } },
+  };
+  function buy(s, id) {
+    const b = BUY[id];
+    if (s.money < b.cost) return;
+    s.money -= b.cost;
+    if (b.kind) s.inv.push({ n: b.n.replace(/^A /, 'Your ').replace('Your house of your own', 'Your house'), amt: b.cost, kind: b.kind });
+    ch(s, b.fx);
   }
   function cashOut(s, i) {
     const x = s.inv[i];
@@ -806,6 +962,6 @@
     return { score, rank, ribbon, worth: w, n };
   }
 
-  const G = { SPORTS, KEYS, ORIGINS, ORIG, POOL, optsFor, scoreAt, posOf, rate, zoneAt, redraw, migrate, build, fmtH, ARC, EV, ACTS, FUNDS, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, invest, cashOut, legacy, ovr, worth, money, tx };
+  const G = { SPORTS, KEYS, ORIGINS, ORIG, COUNTRIES, home, BUY, buy, POOL, optsFor, scoreAt, posOf, rate, zoneAt, redraw, migrate, build, fmtH, ARC, EV, ACTS, FUNDS, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, invest, cashOut, legacy, ovr, worth, money, tx };
   if (typeof module !== 'undefined') module.exports = G; else root.G = G;
 })(this);

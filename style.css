@@ -77,7 +77,7 @@ main { padding-top: var(--space-lg); padding-bottom: calc(var(--tabs-h) + var(--
 
 /* setup */
 .field { display: block; font: 500 var(--text-xs) var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-muted); margin-top: var(--space-lg); }
-.field input {
+.field input, .field select {
   display: block; width: 100%; min-height: 48px; margin-top: var(--space-2xs); padding: 0 var(--space-sm);
   background: var(--color-paper); border: 0; border-bottom: 2px solid var(--color-ink); border-radius: 0;
   font: 600 var(--text-lg) var(--font-body); text-transform: none; letter-spacing: 0; color: var(--color-ink);
