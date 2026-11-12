@@ -22,27 +22,45 @@
       body: { tall: 81, short: 75, mods: { tall: { drv: 3, def: 3, ath: -3, sho: -2 }, short: { ath: 3, pas: 2, drv: -2, def: -2 }, mid: {} } },
       mvp: 'MVP', star: 'All-Star', title: 'champions', final: 'The Finals', entry: 'Draft night', joined: 'Drafted by the {team}.', mid: 'went out in the play-offs',
       entryText: (t) => `With the eleventh pick, the ${t} take a chance on you. A four-year rookie deal and a locker by the door.`,
-      base: (us, them) => [ri(84, 96) + Math.round((us - 70) / 2), ri(86, 98) + Math.round((them - 70) / 2)],
-      line: (st, mf) => {
-        const p = Math.max(2, mf * ((st.sho + st.drv) / 2 - 45) * 0.62 + ri(-15, 15) / 10);
-        const r = Math.max(1, mf * (st.ath + st.def - 90) * 0.09 + ri(-8, 8) / 10);
-        const a = Math.max(0.5, mf * (st.pas - 45) * 0.2 + ri(-8, 8) / 10);
+      base: (us, them) => [ri(86, 92) + Math.round((us - 70) / 2), ri(86, 92) + Math.round((them - 70) / 2)],
+      line: (st, mf, w) => {
+        const p = Math.max(2, w[0] * mf * ((st.sho + st.drv) / 2 - 45) * 0.62 + ri(-15, 15) / 10);
+        const r = Math.max(1, w[1] * mf * (st.ath + st.def - 90) * 0.09 + ri(-8, 8) / 10);
+        const a = Math.max(0.5, w[2] * mf * (st.pas - 45) * 0.2 + ri(-8, 8) / 10);
         return `${p.toFixed(1)} pts · ${r.toFixed(1)} reb · ${a.toFixed(1)} ast`;
       },
+      // att: share of your moments spent attacking. w: weights on the season line (pts, reb, ast).
+      pos: [
+        { id: 'PG', n: 'Point guard', d: 'The ball is in your hands every trip down the floor.', m: { pas: 3, drv: -1, def: -2 }, att: 0.7, off: ['three', 'drive', 'cutter'], def: ['steal', 'contest', 'charge'], w: [1, 0.6, 1.7] },
+        { id: 'SG', n: 'Shooting guard', d: 'Get open, get fed, get buckets.', m: { sho: 3, pas: -2, def: -1 }, att: 0.7, off: ['three', 'pullup', 'drive'], def: ['steal', 'contest', 'charge'], w: [1.15, 0.7, 0.9] },
+        { id: 'SF', n: 'Small forward', d: 'A bit of everything, at both ends.', m: { def: 1, ath: 1, cmp: -2 }, att: 0.6, off: ['three', 'drive', 'cutter'], def: ['steal', 'contest', 'block'], w: [1, 1, 1] },
+        { id: 'PF', n: 'Power forward', d: 'Screens, boards and the dirty work.', m: { def: 2, drv: 1, sho: -3 }, att: 0.5, off: ['pullup', 'post', 'glass'], def: ['contest', 'block', 'charge'], w: [0.95, 1.5, 0.8] },
+        { id: 'C', n: 'Centre', d: 'You own the paint. Everyone else is visiting.', m: { def: 3, drv: 1, sho: -4 }, att: 0.45, off: ['post', 'glass', 'kick'], def: ['block', 'contest', 'box'], w: [0.9, 1.9, 0.7] },
+      ],
       sit: {
-        off: ['Shot clock at eight. Your man is sagging off you.', 'Fast break, two against one.', 'Out of the timeout, the play is drawn for you.', 'A switch leaves a slower defender on you.'],
-        def: ['{star} isolates on you at the top of the key.', 'The pick and roll is coming straight at you.', 'They push the ball in transition.'],
-        clutch: 'Down one. Nine seconds left. The ball is in your hands.',
+        off: ['Shot clock at eight.', 'Fast break, two against one.', 'Out of the timeout, the play is drawn for you.', 'A switch leaves {star} on you.', 'Late in the clock, the ball swings your way.', 'You catch it at the elbow, facing up.', 'A loose ball bounces your way.', 'Their run has to stop. The crowd is on its feet.'],
+        def: ['{star} isolates at the top of the key.', 'The pick and roll comes straight at you.', 'They push it in transition, {star} leading the break.', '{star} curls off a screen.', 'They clear out the side for {star}.', 'A drive and kick. {star} catches it on the wing.'],
+        level: 'Tied. {secs} seconds left. The ball is in your hands.',
+        behind: 'Down {gap}. {secs} seconds left. The ball is in your hands.',
+        ahead: 'Up {gap}. {secs} seconds left. {star} wants the last shot, and you are guarding him.',
+        dbl: 'They send a second defender at you.',
       },
-      off: [
-        { l: 'Pull up from three', k: 'sho', pts: 3, ok: 'Splash. Nothing but net.', no: 'Front rim. They run the other way.' },
-        { l: 'Drive to the rim', k: 'drv', pts: 2, ok: 'You finish through the contact.', no: 'Stripped in the lane.' },
-        { l: 'Hit the cutter', k: 'pas', pts: 2, ok: 'A dime. Easy two for your teammate.', no: 'Picked off. Turnover.' },
-      ],
-      def: [
-        { l: 'Jump the passing lane', k: 'ath', pts: 2, ok: 'Steal. You take it coast to coast.', no: 'You gambled. The open three drops.', lose: 3 },
-        { l: 'Stay down and contest', k: 'def', pts: 0, ok: 'A hand in the face. Tough miss.', no: '{star} rises over you and scores.', lose: 2 },
-      ],
+      // mech: how the meter behaves. sweep = bounce and stop; drift = the window moves; double = two stops; react = one pass only.
+      // vs: which of the opponent's ratings you are up against.
+      opts: {
+        three: { l: 'Pull up from three', k: 'sho', vs: 'def', mech: 'sweep', pts: 3, ok: 'Splash. Nothing but net.', no: 'Front rim. They run the other way.' },
+        pullup: { l: 'Step back for the jumper', k: 'sho', vs: 'def', mech: 'drift', pts: 2, ok: 'Space created, shot buried.', no: '{star} stays attached. Off the side of the rim.' },
+        drive: { l: 'Drive to the rim', k: 'drv', vs: 'def', mech: 'double', pts: 2, ok: 'You finish through the contact.', no: 'Stripped in the lane.' },
+        cutter: { l: 'Hit the cutter', k: 'pas', vs: 'def', mech: 'drift', pts: 2, ok: 'A dime. Easy two for your teammate.', no: 'Picked off. Turnover.' },
+        post: { l: 'Back him down in the post', k: 'drv', vs: 'def', mech: 'double', pts: 2, ok: 'Drop step, soft hook. Two.', no: '{star} holds his ground. You travel.' },
+        glass: { l: 'Crash the offensive glass', k: 'ath', vs: 'ath', mech: 'react', pts: 2, ok: 'Up over everyone for the putback.', no: 'Boxed out. They run.' },
+        kick: { l: 'Kick it out of the double', k: 'pas', vs: 'def', mech: 'drift', pts: 3, ok: 'Inside out. The corner three drops.', no: 'Thrown into the third row.' },
+        steal: { l: 'Jump the passing lane', k: 'ath', vs: 'pas', mech: 'react', pts: 2, ok: 'Steal. You take it coast to coast.', no: 'You gambled. The open three drops.', lose: 3 },
+        contest: { l: 'Stay down and contest', k: 'def', vs: 'sho', mech: 'sweep', pts: 0, ok: 'A hand in the face. Tough miss.', no: '{star} rises over you and scores.', lose: 2 },
+        charge: { l: 'Plant your feet for the charge', k: 'cmp', vs: 'drv', mech: 'react', pts: 0, ok: 'Offensive foul. You bounce up clapping.', no: 'Blocking foul, and the basket counts.', lose: 3 },
+        block: { l: 'Go for the block', k: 'ath', vs: 'drv', mech: 'react', pts: 0, ok: 'Pinned against the glass.', no: 'You leave your feet and {star} lays it in.', lose: 2 },
+        box: { l: 'Box out and rebound', k: 'def', vs: 'ath', mech: 'sweep', pts: 0, ok: 'You seal him off. The board is yours.', no: 'Tip-in. {star} wanted it more.', lose: 2 },
+      },
     },
     soc: {
       name: 'Soccer',
@@ -57,26 +75,41 @@
       mvp: 'Player of the Year', star: 'Team of the Season', title: 'champions', final: 'The Cup Final', entry: 'Signing day', joined: 'Signed by {team} from the academy.', mid: 'finished in the top half',
       entryText: (t) => `${t} sign you from the academy. A four-year deal, the number 27 shirt and a seat at the back of the bus.`,
       base: (us, them) => [(R() < 0.3 + (us - 70) / 100 ? 1 : 0), (R() < 0.4 + (them - 70) / 100 ? 1 : 0)],
-      line: (st, mf) => {
-        const g = Math.max(0, Math.round(mf * (st.sho * 0.6 + st.drv * 0.4 - 50) * 0.75 + ri(-2, 2)));
-        const a = Math.max(0, Math.round(mf * (st.pas - 50) * 0.4 + ri(-2, 2)));
+      line: (st, mf, w) => {
+        const g = Math.max(0, Math.round(w[0] * mf * (st.sho * 0.6 + st.drv * 0.4 - 50) * 0.75 + ri(-2, 2)));
+        const a = Math.max(0, Math.round(w[1] * mf * (st.pas - 50) * 0.4 + ri(-2, 2)));
         const rt = clamp(6 + ((avg(KEYS.map((k) => st[k])) - 60) / 15) * mf, 5, 9.6);
         return `${g} goals · ${a} assists · ${rt.toFixed(1)} rating`;
       },
+      pos: [
+        { id: 'ST', n: 'Striker', d: 'Live in the box. Judged on one number.', m: { sho: 3, def: -3 }, att: 0.75, off: ['shoot', 'header', 'takeon'], def: ['press', 'track'], w: [1.3, 0.7] },
+        { id: 'W', n: 'Winger', d: 'Chalk on your boots and a full-back to beat.', m: { drv: 3, def: -2, cmp: -1 }, att: 0.7, off: ['takeon', 'cross', 'shoot'], def: ['track', 'slide'], w: [0.9, 1.2] },
+        { id: 'CM', n: 'Midfielder', d: 'Box to box. The game goes through you.', m: { pas: 3, sho: -2, ath: -1 }, att: 0.55, off: ['thread', 'longshot', 'takeon'], def: ['intercept', 'slide', 'hold'], w: [0.6, 1.2] },
+        { id: 'DF', n: 'Defender', d: 'Clean sheets, last-ditch blocks and the odd set-piece goal.', m: { def: 4, sho: -3, drv: -1 }, att: 0.3, off: ['header', 'carry', 'switch'], def: ['hold', 'slide', 'intercept'], w: [0.25, 0.4] },
+      ],
       sit: {
-        off: ['You pick the ball up between the lines.', 'A counter-attack, three against two.', 'The full-back shows you the outside.', 'A loose ball drops to you on the edge of the box.'],
-        def: ['{star} runs straight at you.', 'A through ball is played in behind.', 'Their number ten turns in the pocket.'],
-        clutch: 'Ninetieth minute, level. The ball breaks to you in the box.',
+        off: ['You pick the ball up between the lines.', 'A counter-attack, three against two.', '{star} shows you the outside.', 'A loose ball drops to you on the edge of the box.', 'A corner. The box is crowded.', 'A quick throw-in. They switch off for a second.', 'Their keeper shanks a clearance. It falls to you.', 'A one-two on the edge of the area.'],
+        def: ['{star} runs straight at you.', 'A ball in behind, and {star} is chasing it.', '{star} turns in the pocket.', 'A cross is coming. {star} is lurking at the back post.', 'They break three against two. {star} has the ball.', '{star} drops a shoulder on the edge of the box.'],
+        level: 'Ninetieth minute, level. The ball breaks to you.',
+        behind: 'Stoppage time, a goal down. One last chance falls to you.',
+        ahead: 'Stoppage time, a goal up. {star} breaks through and only you are back.',
+        dbl: 'Two of them close you down at once.',
       },
-      off: [
-        { l: 'Shoot', k: 'sho', pts: 1, p: 0.75, ok: 'Top corner. The keeper never moved.', okNo: 'On target, but the keeper claws it away.', no: 'Dragged wide.' },
-        { l: 'Take him on', k: 'drv', pts: 1, p: 0.5, ok: 'You beat your man and square it. Tap-in.', okNo: 'You skin him, but the cross is cleared.', no: 'He reads it and takes the ball.' },
-        { l: 'Thread the pass', k: 'pas', pts: 1, p: 0.55, ok: 'Through the eye of a needle. Finished first time.', okNo: 'A lovely ball. The striker skies it.', no: 'Cut out.' },
-      ],
-      def: [
-        { l: 'Slide in', k: 'ath', pts: 0, ok: 'A clean tackle. The crowd roars.', no: 'Mistimed. They score from the free kick.', noNo: 'Mistimed. The free kick comes to nothing.', lose: 1, lp: 0.5 },
-        { l: 'Hold your position', k: 'def', pts: 0, ok: 'You shepherd him wide. Danger over.', no: '{star} cuts inside and finishes.', noNo: 'He cuts inside and blazes over.', lose: 1, lp: 0.6 },
-      ],
+      opts: {
+        shoot: { l: 'Shoot', k: 'sho', vs: 'def', mech: 'sweep', pts: 1, p: 0.75, ok: 'Top corner. The keeper never moved.', okNo: 'On target, but the keeper claws it away.', no: 'Dragged wide.' },
+        header: { l: 'Attack the cross', k: 'ath', vs: 'def', mech: 'react', pts: 1, p: 0.55, ok: 'You rise highest and bury the header.', okNo: 'A towering header, tipped over the bar.', no: '{star} beats you to it.' },
+        takeon: { l: 'Take him on', k: 'drv', vs: 'def', mech: 'double', pts: 1, p: 0.5, ok: 'You beat your man and square it. Tap-in.', okNo: 'You skin him, but the cross is cleared.', no: '{star} reads it and takes the ball.' },
+        cross: { l: 'Whip in a cross', k: 'pas', vs: 'def', mech: 'drift', pts: 1, p: 0.45, ok: 'Onto the striker’s head. Goal.', okNo: 'A perfect ball. Nobody gambles.', no: 'Straight into the first man.' },
+        thread: { l: 'Thread the pass', k: 'pas', vs: 'def', mech: 'drift', pts: 1, p: 0.55, ok: 'Through the eye of a needle. Finished first time.', okNo: 'A lovely ball. The striker skies it.', no: 'Cut out.' },
+        longshot: { l: 'Hit it from distance', k: 'sho', vs: 'def', mech: 'sweep', pts: 1, p: 0.4, ok: 'From thirty yards. Top corner.', okNo: 'Swerving and dipping, tipped round the post.', no: 'Row Z.' },
+        carry: { l: 'Carry it out from the back', k: 'drv', vs: 'def', mech: 'double', pts: 1, p: 0.25, ok: 'Past one, past two, then a pass through. Goal.', okNo: 'You break the lines and the move goes on.', no: 'Caught in possession. {star} scores.', noNo: 'Caught in possession. A gasp, then a clearance.', lose: 1, lp: 0.35 },
+        switch: { l: 'Switch the play', k: 'pas', vs: 'def', mech: 'drift', pts: 1, p: 0.3, ok: 'Sixty yards onto the winger’s toe, and he scores.', okNo: 'Sixty yards onto the winger’s toe. The move goes on.', no: 'Overhit. Throw-in to them.' },
+        slide: { l: 'Slide in', k: 'ath', vs: 'drv', mech: 'react', pts: 0, ok: 'A clean tackle. The crowd roars.', no: 'Mistimed. They score from the free kick.', noNo: 'Mistimed. The free kick comes to nothing.', lose: 1, lp: 0.5 },
+        hold: { l: 'Hold your position', k: 'def', vs: 'drv', mech: 'sweep', pts: 0, ok: 'You shepherd him wide. Danger over.', no: '{star} cuts inside and finishes.', noNo: '{star} cuts inside and blazes over.', lose: 1, lp: 0.6 },
+        press: { l: 'Press the keeper', k: 'ath', vs: 'pas', mech: 'react', pts: 1, p: 0.2, ok: 'You charge it down and it rolls into the net.', okNo: 'You force the long ball. Possession back.', no: 'They play round you easily.' },
+        track: { l: 'Track your runner', k: 'ath', vs: 'ath', mech: 'sweep', pts: 0, ok: 'You get back and block the cross.', no: '{star} is free at the back post. Goal.', noNo: '{star} is free at the back post, and heads wide.', lose: 1, lp: 0.45 },
+        intercept: { l: 'Read the pass', k: 'def', vs: 'pas', mech: 'drift', pts: 0, ok: 'You step in and steal it. Counter on.', no: 'Wrong guess. {star} is through, and scores.', noNo: 'Wrong guess. {star} is through, but drags it wide.', lose: 1, lp: 0.35 },
+      },
     },
   };
 
@@ -85,40 +118,104 @@
   const PARTNERS = ['Amara', 'Zainab', 'Sofia', 'Kemi', 'Elena', 'Tolu', 'Maya', 'Ada', 'Jordan', 'Sam', 'Ife', 'Noor'];
   const person = () => `${pick(FIRST)} ${pick(LAST)}`;
 
-  // The reel in the Draw: real players. The ratings are our own opinion, not official data.
-  // [name, position, sho, drv, pas, def, ath, cmp, height (inches for bb, cm for soc)]. First 24 of each are active players.
+  // The reel in the Draw: real players, from greats to busts, every one equally likely. The ratings are our own opinion, not official data.
+  // [name, position, sho, drv, pas, def, ath, cmp, height (inches for bb, cm for soc)]
   const POOL = {
     bb: [
-      ['Stephen Curry', 'G', 99, 84, 90, 66, 80, 96, 74], ['LeBron James', 'F', 82, 97, 95, 88, 95, 93, 81], ['Kevin Durant', 'F', 96, 93, 80, 80, 86, 94, 83],
-      ['Giannis Antetokounmpo', 'F', 68, 99, 82, 93, 98, 84, 83], ['Nikola Jokic', 'C', 86, 93, 99, 76, 62, 95, 83], ['Luka Doncic', 'G', 90, 92, 97, 68, 72, 93, 79],
-      ['Shai Gilgeous-Alexander', 'G', 88, 97, 85, 86, 88, 93, 78], ['Jayson Tatum', 'F', 88, 89, 80, 85, 86, 86, 80], ['Joel Embiid', 'C', 82, 96, 74, 90, 78, 82, 84],
-      ['Anthony Edwards', 'G', 87, 94, 76, 82, 97, 88, 76], ['Victor Wembanyama', 'C', 80, 90, 74, 99, 88, 82, 88], ['Kawhi Leonard', 'F', 88, 90, 76, 97, 84, 96, 79],
-      ['Damian Lillard', 'G', 95, 86, 86, 62, 80, 97, 74], ['Kyrie Irving', 'G', 92, 96, 84, 66, 84, 94, 74], ['Jimmy Butler', 'F', 76, 90, 82, 90, 82, 96, 79],
-      ['Devin Booker', 'G', 92, 89, 82, 70, 80, 90, 77], ['Ja Morant', 'G', 74, 96, 88, 66, 98, 86, 74], ['Donovan Mitchell', 'G', 88, 92, 78, 72, 90, 88, 75],
-      ['Jalen Brunson', 'G', 88, 92, 86, 66, 74, 95, 74], ['Tyrese Haliburton', 'G', 88, 80, 97, 68, 78, 90, 77], ['Anthony Davis', 'C', 74, 93, 70, 97, 88, 82, 82],
-      ['Draymond Green', 'F', 62, 70, 90, 96, 76, 88, 78], ['Rudy Gobert', 'C', 40, 82, 52, 98, 80, 72, 85], ['Klay Thompson', 'G', 96, 72, 66, 80, 70, 90, 78],
-      ['Chris Paul', 'G', 84, 78, 98, 84, 66, 96, 72], ['Michael Jordan', 'G', 86, 99, 82, 96, 97, 99, 78], ['Kobe Bryant', 'G', 90, 96, 80, 92, 92, 99, 78],
-      ['Magic Johnson', 'G', 74, 90, 99, 78, 84, 95, 81], ['Larry Bird', 'F', 96, 86, 92, 80, 68, 97, 81], ['Shaquille O\u2019Neal', 'C', 40, 99, 68, 90, 92, 84, 85],
-      ['Tim Duncan', 'C', 72, 92, 76, 97, 78, 95, 83], ['Hakeem Olajuwon', 'C', 70, 96, 68, 99, 90, 92, 84], ['Allen Iverson', 'G', 80, 96, 84, 74, 97, 92, 72],
-      ['Dirk Nowitzki', 'F', 95, 86, 70, 66, 64, 94, 84], ['Kareem Abdul-Jabbar', 'C', 70, 99, 76, 92, 80, 94, 86], ['Ray Allen', 'G', 98, 80, 72, 72, 80, 95, 77],
-      ['Dennis Rodman', 'F', 40, 62, 60, 98, 90, 80, 79], ['Steve Nash', 'G', 93, 80, 98, 54, 72, 93, 75], ['Vince Carter', 'G', 86, 93, 74, 70, 99, 84, 78],
+      ['Stephen Curry', 'PG', 99, 84, 90, 66, 80, 96, 74], ['LeBron James', 'SF', 82, 97, 95, 88, 95, 93, 81], ['Kevin Durant', 'SF', 96, 93, 80, 80, 86, 94, 83],
+      ['Giannis Antetokounmpo', 'PF', 68, 99, 82, 93, 98, 84, 83], ['Nikola Jokić', 'C', 86, 93, 99, 76, 62, 95, 83], ['Luka Dončić', 'PG', 90, 92, 97, 68, 72, 93, 79],
+      ['Shai Gilgeous-Alexander', 'PG', 88, 97, 85, 86, 88, 93, 78], ['Jayson Tatum', 'SF', 88, 89, 80, 85, 86, 86, 80], ['Joel Embiid', 'C', 82, 96, 74, 90, 78, 82, 84],
+      ['Anthony Edwards', 'SG', 87, 94, 76, 82, 97, 88, 76], ['Victor Wembanyama', 'C', 80, 90, 74, 99, 88, 82, 88], ['Kawhi Leonard', 'SF', 88, 90, 76, 97, 84, 96, 79],
+      ['Damian Lillard', 'PG', 95, 86, 86, 62, 80, 97, 74], ['Kyrie Irving', 'PG', 92, 96, 84, 66, 84, 94, 74], ['Jimmy Butler', 'SF', 76, 90, 82, 90, 82, 96, 79],
+      ['Devin Booker', 'SG', 92, 89, 82, 70, 80, 90, 77], ['Ja Morant', 'PG', 74, 96, 88, 66, 98, 86, 74], ['Donovan Mitchell', 'SG', 88, 92, 78, 72, 90, 88, 75],
+      ['Jalen Brunson', 'PG', 88, 92, 86, 66, 74, 95, 74], ['Tyrese Haliburton', 'PG', 88, 80, 97, 68, 78, 90, 77], ['Anthony Davis', 'PF', 74, 93, 70, 97, 88, 82, 82],
+      ['Draymond Green', 'PF', 62, 70, 90, 96, 76, 88, 78], ['Rudy Gobert', 'C', 40, 82, 52, 98, 80, 72, 85], ['Klay Thompson', 'SG', 96, 72, 66, 80, 70, 90, 78],
+      ['Chris Paul', 'PG', 84, 78, 98, 84, 66, 96, 72], ['James Harden', 'SG', 90, 92, 92, 62, 76, 88, 77], ['Russell Westbrook', 'PG', 66, 94, 88, 72, 96, 74, 75],
+      ['Paul George', 'SF', 88, 84, 76, 86, 82, 84, 80], ['Jaylen Brown', 'SG', 82, 90, 70, 82, 90, 82, 78], ['Bam Adebayo', 'C', 52, 82, 76, 94, 88, 82, 81],
+      ['Domantas Sabonis', 'C', 56, 86, 86, 70, 72, 84, 83], ['De’Aaron Fox', 'PG', 78, 94, 80, 72, 96, 86, 75], ['Trae Young', 'PG', 88, 84, 96, 40, 72, 88, 73],
+      ['Zion Williamson', 'PF', 50, 97, 72, 62, 94, 74, 78], ['Paolo Banchero', 'PF', 76, 90, 76, 70, 84, 82, 82], ['Cade Cunningham', 'PG', 82, 86, 88, 72, 76, 86, 78],
+      ['Karl-Anthony Towns', 'C', 90, 84, 70, 64, 70, 80, 84], ['Pascal Siakam', 'PF', 74, 88, 74, 82, 82, 82, 80], ['Jamal Murray', 'PG', 86, 86, 80, 64, 76, 92, 76],
+      ['Chet Holmgren', 'C', 80, 78, 68, 94, 78, 80, 85], ['Evan Mobley', 'PF', 62, 84, 70, 94, 84, 78, 84], ['Scottie Barnes', 'SF', 70, 84, 82, 84, 86, 80, 79],
+      ['LaMelo Ball', 'PG', 84, 82, 92, 62, 80, 80, 79], ['Zach LaVine', 'SG', 88, 88, 72, 58, 94, 80, 77], ['DeMar DeRozan', 'SF', 72, 90, 80, 66, 76, 92, 78],
+      ['Kristaps Porziņģis', 'C', 86, 78, 60, 86, 64, 80, 86], ['Lauri Markkanen', 'PF', 88, 78, 60, 62, 72, 80, 84], ['Jrue Holiday', 'PG', 80, 80, 82, 94, 80, 90, 76],
+      ['Mikal Bridges', 'SF', 82, 78, 68, 88, 82, 82, 78], ['Ben Simmons', 'PG', 30, 84, 90, 90, 90, 62, 82], ['Lonzo Ball', 'PG', 76, 62, 88, 84, 80, 78, 78],
+      ['Alex Caruso', 'SG', 66, 64, 72, 92, 82, 82, 77], ['Marcus Smart', 'PG', 62, 70, 78, 92, 76, 80, 76], ['Derrick White', 'SG', 80, 72, 78, 88, 74, 86, 76],
+      ['OG Anunoby', 'SF', 76, 72, 58, 92, 86, 78, 79], ['Josh Hart', 'SG', 60, 76, 74, 78, 82, 80, 76], ['Steven Adams', 'C', 30, 70, 58, 80, 82, 76, 83],
+      ['Brook Lopez', 'C', 78, 62, 52, 86, 58, 82, 85], ['P.J. Tucker', 'PF', 62, 54, 52, 82, 70, 82, 77], ['Patty Mills', 'PG', 80, 66, 66, 52, 72, 84, 73],
+      ['Duncan Robinson', 'SF', 88, 52, 58, 46, 60, 74, 79], ['Matthew Dellavedova', 'PG', 60, 52, 72, 62, 58, 72, 76], ['Boban Marjanović', 'C', 40, 74, 40, 52, 30, 70, 88],
+      ['Tacko Fall', 'C', 30, 62, 30, 60, 40, 60, 90], ['Precious Achiuwa', 'PF', 46, 70, 48, 76, 84, 62, 80], ['Josh Okogie', 'SG', 48, 62, 50, 82, 86, 64, 76],
+      ['Jordan Nwora', 'SF', 72, 56, 46, 46, 62, 60, 79], ['Al-Farouq Aminu', 'PF', 52, 54, 50, 80, 78, 64, 81], ['Gabe Vincent', 'PG', 70, 62, 66, 70, 70, 74, 75],
+      ['Chimezie Metu', 'PF', 48, 62, 40, 56, 76, 56, 81], ['Anthony Bennett', 'PF', 42, 50, 40, 40, 62, 40, 80], ['Kwame Brown', 'C', 30, 56, 40, 62, 70, 40, 83],
+      ['Darko Miličić', 'C', 36, 52, 40, 66, 62, 44, 84], ['Hasheem Thabeet', 'C', 30, 46, 30, 70, 58, 46, 87], ['Greg Oden', 'C', 30, 72, 40, 80, 64, 60, 84],
+      ['Michael Olowokandi', 'C', 34, 56, 34, 64, 64, 46, 84], ['Adam Morrison', 'SF', 62, 52, 46, 36, 46, 48, 80], ['Markelle Fultz', 'PG', 40, 70, 74, 60, 76, 52, 76],
+      ['Sam Bowie', 'C', 50, 60, 56, 72, 46, 60, 85], ['Muggsy Bogues', 'PG', 56, 62, 92, 70, 86, 84, 63], ['Spud Webb', 'PG', 66, 70, 80, 50, 94, 74, 67],
+      ['Nate Robinson', 'PG', 76, 78, 66, 50, 96, 66, 69], ['Manute Bol', 'C', 36, 40, 30, 92, 40, 60, 91], ['Gheorghe Mureșan', 'C', 30, 62, 30, 56, 30, 56, 91],
+      ['Yao Ming', 'C', 80, 90, 64, 82, 58, 84, 90], ['Michael Jordan', 'SG', 86, 99, 82, 96, 97, 99, 78], ['Kobe Bryant', 'SG', 90, 96, 80, 92, 92, 99, 78],
+      ['Magic Johnson', 'PG', 74, 90, 99, 78, 84, 95, 81], ['Larry Bird', 'SF', 96, 86, 92, 80, 68, 97, 81], ['Shaquille O’Neal', 'C', 40, 99, 68, 90, 92, 84, 85],
+      ['Tim Duncan', 'PF', 72, 92, 76, 97, 78, 95, 83], ['Hakeem Olajuwon', 'C', 70, 96, 68, 99, 90, 92, 84], ['Allen Iverson', 'PG', 80, 96, 84, 74, 97, 92, 72],
+      ['Dirk Nowitzki', 'PF', 95, 86, 70, 66, 64, 94, 84], ['Kareem Abdul-Jabbar', 'C', 70, 99, 76, 92, 80, 94, 86], ['Ray Allen', 'SG', 98, 80, 72, 72, 80, 95, 77],
+      ['Dennis Rodman', 'PF', 40, 62, 60, 98, 90, 80, 79], ['Steve Nash', 'PG', 93, 80, 98, 54, 72, 93, 75], ['Vince Carter', 'SG', 86, 93, 74, 70, 99, 84, 78],
+      ['Wilt Chamberlain', 'C', 60, 99, 74, 90, 99, 82, 85], ['Bill Russell', 'C', 40, 80, 78, 99, 92, 96, 82], ['Oscar Robertson', 'PG', 84, 92, 96, 72, 82, 94, 77],
+      ['Jerry West', 'PG', 94, 88, 84, 86, 82, 98, 74], ['Julius Erving', 'SF', 74, 96, 78, 78, 99, 88, 79], ['Karl Malone', 'PF', 72, 94, 72, 80, 88, 84, 81],
+      ['John Stockton', 'PG', 82, 72, 99, 84, 66, 92, 73], ['Scottie Pippen', 'SF', 72, 86, 86, 97, 90, 86, 80], ['Charles Barkley', 'PF', 66, 96, 80, 74, 92, 82, 78],
+      ['Patrick Ewing', 'C', 74, 90, 58, 90, 78, 84, 84], ['David Robinson', 'C', 72, 92, 64, 96, 94, 80, 85], ['Reggie Miller', 'SG', 97, 70, 70, 62, 70, 97, 79],
+      ['Gary Payton', 'PG', 74, 86, 90, 97, 82, 90, 76], ['Isiah Thomas', 'PG', 82, 92, 94, 72, 84, 96, 73], ['Tracy McGrady', 'SG', 88, 94, 82, 72, 92, 82, 80],
+      ['Kevin Garnett', 'PF', 76, 84, 78, 96, 88, 88, 83], ['Paul Pierce', 'SF', 88, 88, 76, 76, 72, 96, 79], ['Dwyane Wade', 'SG', 70, 97, 82, 84, 94, 94, 76],
+      ['Tony Parker', 'PG', 72, 94, 84, 62, 88, 88, 74], ['Manu Ginóbili', 'SG', 84, 90, 86, 78, 80, 96, 78], ['Pau Gasol', 'C', 72, 88, 80, 80, 64, 86, 84],
+      ['Carmelo Anthony', 'SF', 88, 90, 66, 58, 78, 88, 79], ['Dwight Howard', 'C', 30, 86, 48, 96, 96, 62, 82], ['Derrick Rose', 'PG', 72, 96, 84, 64, 98, 84, 75],
+      ['Chris Bosh', 'PF', 80, 82, 64, 82, 78, 82, 83], ['Rajon Rondo', 'PG', 50, 74, 97, 84, 78, 84, 73], ['Dikembe Mutombo', 'C', 30, 62, 40, 99, 78, 74, 86],
+      ['Ben Wallace', 'C', 30, 52, 46, 98, 88, 78, 81], ['Robert Horry', 'PF', 76, 60, 62, 76, 70, 98, 82], ['Bruce Bowen', 'SF', 72, 46, 44, 94, 74, 80, 79],
+      ['Kyle Korver', 'SG', 95, 46, 58, 62, 60, 84, 79], ['J.J. Redick', 'SG', 94, 60, 66, 52, 62, 86, 76], ['Moses Malone', 'C', 50, 92, 52, 82, 88, 84, 82],
+      ['Blake Griffin', 'PF', 62, 90, 82, 62, 96, 74, 81], ['Andre Iguodala', 'SF', 66, 74, 82, 92, 84, 92, 78], ['Derek Fisher', 'PG', 76, 52, 72, 72, 58, 94, 73],
     ],
     soc: [
-      ['Lionel Messi', 'FW', 96, 99, 96, 40, 82, 97, 170], ['Cristiano Ronaldo', 'FW', 97, 90, 82, 40, 90, 96, 187], ['Kylian Mbapp\u00e9', 'FW', 93, 94, 82, 40, 99, 90, 178],
-      ['Erling Haaland', 'FW', 97, 80, 68, 46, 94, 90, 195], ['Kevin De Bruyne', 'MF', 88, 88, 99, 64, 76, 92, 181], ['Mohamed Salah', 'FW', 92, 92, 86, 46, 93, 90, 175],
-      ['Vin\u00edcius J\u00fanior', 'FW', 86, 97, 80, 36, 97, 82, 176], ['Jude Bellingham', 'MF', 86, 90, 88, 80, 84, 92, 186], ['Lamine Yamal', 'FW', 84, 95, 88, 36, 90, 86, 180],
-      ['Harry Kane', 'FW', 96, 82, 90, 48, 70, 93, 188], ['Rodri', 'MF', 78, 82, 92, 92, 66, 96, 191], ['Luka Modri\u0107', 'MF', 78, 92, 96, 74, 72, 96, 172],
-      ['Virgil van Dijk', 'DF', 60, 72, 78, 97, 80, 95, 195], ['Victor Osimhen', 'FW', 90, 82, 68, 44, 94, 84, 186], ['Bukayo Saka', 'FW', 86, 92, 86, 60, 88, 88, 178],
-      ['Neymar', 'FW', 88, 98, 92, 36, 88, 84, 175], ['Robert Lewandowski', 'FW', 96, 84, 80, 44, 76, 92, 185], ['Pedri', 'MF', 74, 92, 94, 70, 76, 92, 174],
-      ['Declan Rice', 'MF', 72, 78, 86, 92, 78, 88, 188], ['William Saliba', 'DF', 44, 72, 78, 94, 86, 88, 192], ['Achraf Hakimi', 'DF', 72, 86, 84, 82, 96, 82, 181],
-      ['Florian Wirtz', 'MF', 84, 93, 92, 52, 80, 86, 177], ['Son Heung-min', 'FW', 92, 88, 82, 44, 90, 88, 183], ['Antoine Griezmann', 'FW', 88, 88, 90, 60, 78, 92, 176],
-      ['Pel\u00e9', 'FW', 97, 97, 92, 50, 92, 97, 173], ['Diego Maradona', 'FW', 92, 99, 94, 40, 86, 94, 165], ['Zinedine Zidane', 'MF', 86, 96, 96, 62, 74, 97, 185],
-      ['Ronaldo Naz\u00e1rio', 'FW', 98, 98, 80, 36, 97, 92, 183], ['Ronaldinho', 'FW', 88, 99, 94, 38, 86, 88, 181], ['Thierry Henry', 'FW', 94, 92, 84, 42, 97, 90, 188],
-      ['Jay-Jay Okocha', 'MF', 82, 98, 88, 50, 82, 84, 173], ['Paolo Maldini', 'DF', 50, 74, 78, 99, 82, 97, 186], ['Andr\u00e9s Iniesta', 'MF', 76, 96, 97, 62, 76, 96, 171],
-      ['Xavi', 'MF', 72, 88, 99, 68, 66, 97, 170], ['Nwankwo Kanu', 'FW', 86, 92, 84, 40, 74, 88, 197], ['Didier Drogba', 'FW', 93, 82, 74, 52, 86, 94, 188],
-      ['Samuel Eto\u2019o', 'FW', 94, 90, 78, 44, 95, 90, 180], ['Yaya Tour\u00e9', 'MF', 84, 86, 88, 84, 82, 90, 188], ['George Weah', 'FW', 92, 94, 78, 44, 96, 88, 184],
+      ['Lionel Messi', 'W', 96, 99, 96, 40, 82, 97, 170], ['Cristiano Ronaldo', 'ST', 97, 90, 82, 40, 90, 96, 187], ['Kylian Mbappé', 'ST', 93, 94, 82, 40, 99, 90, 178],
+      ['Erling Haaland', 'ST', 97, 80, 68, 46, 94, 90, 195], ['Kevin De Bruyne', 'CM', 88, 88, 99, 64, 76, 92, 181], ['Mohamed Salah', 'W', 92, 92, 86, 46, 93, 90, 175],
+      ['Vinícius Júnior', 'W', 86, 97, 80, 36, 97, 82, 176], ['Jude Bellingham', 'CM', 86, 90, 88, 80, 84, 92, 186], ['Lamine Yamal', 'W', 84, 95, 88, 36, 90, 86, 180],
+      ['Harry Kane', 'ST', 96, 82, 90, 48, 70, 93, 188], ['Rodri', 'CM', 78, 82, 92, 92, 66, 96, 191], ['Luka Modrić', 'CM', 78, 92, 96, 74, 72, 96, 172],
+      ['Virgil van Dijk', 'DF', 60, 72, 78, 97, 80, 95, 195], ['Victor Osimhen', 'ST', 90, 82, 68, 44, 94, 84, 186], ['Bukayo Saka', 'W', 86, 92, 86, 60, 88, 88, 178],
+      ['Neymar', 'W', 88, 98, 92, 36, 88, 84, 175], ['Robert Lewandowski', 'ST', 96, 84, 80, 44, 76, 92, 185], ['Pedri', 'CM', 74, 92, 94, 70, 76, 92, 174],
+      ['Declan Rice', 'CM', 72, 78, 86, 92, 78, 88, 188], ['William Saliba', 'DF', 44, 72, 78, 94, 86, 88, 192], ['Achraf Hakimi', 'DF', 72, 86, 84, 82, 96, 82, 181],
+      ['Florian Wirtz', 'CM', 84, 93, 92, 52, 80, 86, 177], ['Son Heung-min', 'W', 92, 88, 82, 44, 90, 88, 183], ['Antoine Griezmann', 'ST', 88, 88, 90, 60, 78, 92, 176],
+      ['Raheem Sterling', 'W', 78, 88, 78, 40, 90, 74, 170], ['Marcus Rashford', 'W', 84, 86, 76, 44, 92, 74, 185], ['Jack Grealish', 'W', 70, 90, 82, 46, 72, 80, 180],
+      ['Phil Foden', 'W', 86, 90, 88, 52, 80, 86, 171], ['Cole Palmer', 'CM', 88, 88, 90, 48, 76, 92, 189], ['Trent Alexander-Arnold', 'DF', 74, 76, 95, 72, 76, 84, 180],
+      ['Andy Robertson', 'DF', 60, 76, 84, 80, 88, 82, 178], ['Bruno Fernandes', 'CM', 86, 82, 92, 58, 74, 86, 179], ['Casemiro', 'CM', 70, 70, 80, 90, 70, 90, 185],
+      ['N’Golo Kanté', 'CM', 62, 80, 82, 94, 90, 88, 168], ['Paul Pogba', 'CM', 84, 88, 90, 70, 80, 80, 191], ['Riyad Mahrez', 'W', 84, 92, 84, 40, 80, 86, 179],
+      ['Sadio Mané', 'W', 88, 90, 78, 52, 94, 86, 174], ['Pierre-Emerick Aubameyang', 'ST', 90, 80, 70, 38, 96, 84, 187], ['Romelu Lukaku', 'ST', 88, 76, 66, 44, 84, 78, 191],
+      ['Ousmane Dembélé', 'W', 84, 94, 82, 42, 94, 74, 178], ['Thomas Müller', 'ST', 84, 74, 90, 56, 66, 92, 185], ['Toni Kroos', 'CM', 84, 80, 98, 64, 58, 96, 183],
+      ['Jamal Musiala', 'CM', 80, 96, 86, 46, 82, 86, 184], ['Federico Valverde', 'CM', 84, 82, 86, 80, 90, 86, 182], ['Antonio Rüdiger', 'DF', 50, 62, 70, 90, 86, 82, 190],
+      ['Khvicha Kvaratskhelia', 'W', 84, 94, 84, 40, 86, 80, 183], ['Rafael Leão', 'W', 82, 92, 76, 36, 96, 72, 188], ['Lautaro Martínez', 'ST', 90, 84, 72, 48, 84, 88, 174],
+      ['Julián Álvarez', 'ST', 86, 84, 80, 62, 86, 86, 170], ['Ángel Di María', 'W', 84, 90, 90, 46, 84, 88, 180], ['Martin Ødegaard', 'CM', 82, 88, 94, 56, 74, 88, 178],
+      ['Alexis Mac Allister', 'CM', 80, 80, 88, 80, 74, 88, 174], ['Jérémy Doku', 'W', 66, 95, 68, 38, 96, 64, 173], ['Nico Williams', 'W', 76, 92, 78, 40, 96, 74, 181],
+      ['Ollie Watkins', 'ST', 86, 74, 72, 54, 86, 82, 180], ['Kyle Walker', 'DF', 48, 72, 72, 86, 96, 82, 183], ['Christian Pulisic', 'W', 82, 88, 80, 46, 86, 80, 177],
+      ['Darwin Núñez', 'ST', 80, 80, 64, 46, 94, 62, 187], ['Mason Mount', 'CM', 80, 80, 84, 62, 76, 78, 181], ['Kalvin Phillips', 'CM', 62, 64, 80, 78, 66, 72, 178],
+      ['Ademola Lookman', 'W', 86, 88, 78, 40, 86, 82, 174], ['Wilfred Ndidi', 'CM', 58, 68, 74, 90, 82, 80, 183], ['Alex Iwobi', 'CM', 72, 82, 82, 62, 76, 72, 180],
+      ['Samuel Chukwueze', 'W', 74, 88, 70, 36, 90, 62, 172], ['Kelechi Iheanacho', 'ST', 84, 78, 74, 36, 70, 74, 185], ['Odion Ighalo', 'ST', 82, 70, 60, 40, 72, 80, 188],
+      ['Ahmed Musa', 'W', 72, 80, 62, 38, 94, 66, 170], ['Victor Moses', 'W', 72, 82, 70, 62, 86, 70, 177], ['Victor Boniface', 'ST', 84, 84, 70, 40, 82, 72, 190],
+      ['Calvin Bassey', 'DF', 50, 64, 66, 82, 86, 72, 185], ['William Troost-Ekong', 'DF', 52, 48, 60, 80, 68, 82, 191], ['Moses Simon', 'W', 70, 86, 74, 40, 90, 70, 168],
+      ['John Obi Mikel', 'CM', 56, 70, 82, 82, 72, 84, 188], ['Jesse Lingard', 'CM', 74, 78, 74, 52, 78, 68, 175], ['Harry Maguire', 'DF', 56, 52, 66, 82, 58, 72, 194],
+      ['Phil Jones', 'DF', 40, 50, 54, 76, 62, 60, 185], ['Wout Weghorst', 'ST', 74, 50, 58, 52, 56, 70, 197], ['Peter Crouch', 'ST', 80, 70, 68, 40, 56, 80, 201],
+      ['Andy Carroll', 'ST', 76, 58, 56, 46, 64, 66, 193], ['Emile Heskey', 'ST', 70, 64, 64, 48, 82, 72, 188], ['Adebayo Akinfenwa', 'ST', 72, 48, 52, 46, 40, 80, 180],
+      ['Nicklas Bendtner', 'ST', 70, 60, 56, 36, 60, 56, 194], ['Ali Dia', 'ST', 32, 34, 30, 30, 48, 30, 180], ['Jamie Vardy', 'ST', 88, 76, 66, 48, 92, 84, 179],
+      ['Pelé', 'ST', 97, 97, 92, 50, 92, 97, 173], ['Diego Maradona', 'CM', 92, 99, 94, 40, 86, 94, 165], ['Zinedine Zidane', 'CM', 86, 96, 96, 62, 74, 97, 185],
+      ['Ronaldo Nazário', 'ST', 98, 98, 80, 36, 97, 92, 183], ['Ronaldinho', 'W', 88, 99, 94, 38, 86, 88, 181], ['Thierry Henry', 'ST', 94, 92, 84, 42, 97, 90, 188],
+      ['Jay-Jay Okocha', 'CM', 82, 98, 88, 50, 82, 84, 173], ['Paolo Maldini', 'DF', 50, 74, 78, 99, 82, 97, 186], ['Andrés Iniesta', 'CM', 76, 96, 97, 62, 76, 96, 171],
+      ['Xavi', 'CM', 72, 88, 99, 68, 66, 97, 170], ['Nwankwo Kanu', 'ST', 86, 92, 84, 40, 74, 88, 197], ['Didier Drogba', 'ST', 93, 82, 74, 52, 86, 94, 188],
+      ['Samuel Eto’o', 'ST', 94, 90, 78, 44, 95, 90, 180], ['Yaya Touré', 'CM', 84, 86, 88, 84, 82, 90, 188], ['George Weah', 'ST', 92, 94, 78, 44, 96, 88, 184],
+      ['Sergio Ramos', 'DF', 72, 66, 76, 92, 82, 92, 184], ['Carles Puyol', 'DF', 44, 56, 64, 94, 82, 94, 178], ['Rio Ferdinand', 'DF', 46, 70, 76, 94, 86, 90, 189],
+      ['John Terry', 'DF', 56, 52, 66, 94, 70, 94, 187], ['Roberto Carlos', 'DF', 86, 82, 80, 80, 96, 82, 168], ['Cafu', 'DF', 58, 82, 82, 84, 92, 88, 176],
+      ['Dani Alves', 'DF', 66, 84, 88, 78, 86, 84, 172], ['Kaká', 'CM', 88, 96, 90, 46, 94, 88, 186], ['Frank Lampard', 'CM', 92, 78, 88, 68, 76, 92, 184],
+      ['Steven Gerrard', 'CM', 90, 82, 92, 78, 82, 94, 183], ['Paul Scholes', 'CM', 88, 78, 96, 64, 62, 94, 170], ['Wayne Rooney', 'ST', 92, 88, 88, 60, 84, 90, 176],
+      ['David Beckham', 'W', 84, 72, 97, 60, 74, 90, 180], ['Andrea Pirlo', 'CM', 84, 76, 99, 58, 50, 98, 177], ['Francesco Totti', 'ST', 90, 88, 94, 40, 72, 94, 180],
+      ['Zlatan Ibrahimović', 'ST', 95, 88, 84, 40, 80, 94, 195], ['Luis Suárez', 'ST', 95, 90, 84, 46, 82, 86, 182], ['Sergio Agüero', 'ST', 95, 90, 78, 36, 86, 92, 173],
+      ['Karim Benzema', 'ST', 92, 88, 88, 40, 78, 94, 185], ['Arjen Robben', 'W', 92, 94, 80, 40, 92, 84, 180], ['Patrick Vieira', 'CM', 72, 80, 84, 92, 86, 90, 193],
+      ['Claude Makélélé', 'CM', 50, 72, 82, 94, 78, 92, 170], ['Michael Essien', 'CM', 76, 80, 80, 90, 90, 86, 178], ['Taribo West', 'DF', 48, 56, 54, 86, 84, 74, 181],
+      ['Sunday Oliseh', 'CM', 80, 70, 84, 84, 74, 84, 183], ['Rashidi Yekini', 'ST', 90, 70, 56, 36, 80, 82, 190], ['Finidi George', 'W', 76, 90, 84, 40, 88, 80, 181],
+      ['Daniel Amokachi', 'ST', 82, 82, 64, 40, 94, 74, 180], ['Obafemi Martins', 'ST', 82, 82, 62, 36, 98, 72, 170], ['Joseph Yobo', 'DF', 46, 54, 60, 86, 80, 82, 185],
     ],
   };
+  const pAvg = (p) => avg(p.slice(2, 8));
+  const RANKED = Object.fromEntries(Object.entries(POOL).map(([k, v]) => [k, v.slice().sort((a, b) => pAvg(b) - pAvg(a))]));
 
   const LABEL = { coach: 'Coach', mates: 'Teammates', morale: 'Morale', fame: 'Fame', health: 'Fitness', money: 'Money', bond: 'Partner', heat: 'Rivalry' };
 
@@ -371,9 +468,9 @@
   }
 
   // ---------- career start ----------
-  function create({ name, sport, arch, origin, story, look }) {
+  function create({ name, sport, arch, pos, origin, story, look }) {
     const s = {
-      v: 2, cap: {}, src: {}, h: 0, look: Object.assign({ skin: 4, hair: 'fade', beard: 0, band: 0 }, look), name: (name || '').trim().slice(0, 18) || 'The Kid', sport, arch, age: 18,
+      v: 3, pos: SPORTS[sport].pos.some((p) => p.id === pos) ? pos : SPORTS[sport].pos[0].id, cap: {}, src: {}, h: 0, look: Object.assign({ skin: 4, hair: 'fade', beard: 0, band: 0 }, look), name: (name || '').trim().slice(0, 18) || 'The Kid', sport, arch, age: 18,
       st: {}, coach: 55, mates: 50, morale: 60, fame: 5, health: 85, heat: 40, money: 20,
       partner: null, inv: [], f: {}, seen: {}, log: [], seasons: [], grades: [], days: 2, note: '',
       names: { coach: person(), mate: person(), rival: person(), exCoach: '' },
@@ -390,11 +487,21 @@
   function spin(s) {
     const c = s.cur;
     if (c.card) { if (!c.respin) return; c.respin--; }
-    const p = pick(POOL[s.sport].filter((x) => !c.used.includes(x[0])));
+    // ratings can come from anyone, all equally likely; the frame comes from someone who plays your position
+    const from = c.left.length ? POOL[s.sport] : POOL[s.sport].filter((x) => x[1] === s.pos);
+    const p = pick(from.filter((x) => !c.used.includes(x[0])));
     c.used.push(p[0]);
     c.card = { n: p[0], pos: p[1], r: Object.fromEntries(KEYS.map((k, i) => [k, p[i + 2]])), h: p[8] };
-    c.reel = Array.from({ length: 11 }, () => pick(POOL[s.sport])[0]).concat(p[0]); // names that fly past
+    c.reel = Array.from({ length: 11 }, () => pick(from)[0]).concat(p[0]); // names that fly past
   }
+
+  // Throw the build away and draw again. Only before the first season starts.
+  function redraw(s) {
+    if (s.cur.t !== 'draw' && s.cur.t !== 'signed') return;
+    Object.assign(s, { st: {}, cap: {}, src: {}, h: 0, team: '', teams: 0, log: [], cur: { t: 'draw', left: KEYS.slice(), card: null, respin: 2, used: [] } });
+  }
+
+  const posOf = (s) => cfg(s).pos.find((p) => p.id === s.pos) || cfg(s).pos[0];
 
   // Take one thing from the player on the card: a rating (it becomes your ceiling) or, on the last spin, his frame.
   function place(s, key) {
@@ -412,7 +519,7 @@
 
   function signUp(s) {
     const m = Object.assign({}, cfg(s).arch.find((x) => x.id === s.arch).m);
-    for (const add of [ORIG[s.origin].st, cfg(s).body.mods[build(s)]]) for (const k in add) m[k] = (m[k] || 0) + add[k];
+    for (const add of [ORIG[s.origin].st, cfg(s).body.mods[build(s)], posOf(s).m]) for (const k in add) m[k] = (m[k] || 0) + add[k];
     for (const k in m) { s.st[k] = clamp(s.st[k] + m[k], 30, 99); s.cap[k] = clamp(s.cap[k] + m[k], 30, 99); }
     const o = ovr(s);
     s.tier = o >= 74 ? 2 : 3; // good prospects still start low: room to climb
@@ -475,45 +582,94 @@
     say(s, `${tx(s, e.title)}: ${label.toLowerCase().replace(/[“”]/g, '')}.`);
   }
 
-  // ---------- matches: a handful of timed moments ----------
+  // ---------- matches: a handful of timed moments, each one against a real player ----------
+  // Better teams field better players. def: he is attacking you, so in soccer he is not a defender.
+  function foe(s, tier, def) {
+    const r = RANKED[s.sport], n = r.length, [a, b] = [[0, 0.2], [0, 0.35], [0.25, 0.7], [0.5, 1]][tier];
+    const band = r.slice(Math.floor(a * n), Math.ceil(b * n));
+    const fit = s.sport === 'soc' ? band.filter((p) => (def ? p[1] !== 'DF' : p[1] === 'DF' || p[1] === 'CM')) : band;
+    return pick(fit.length ? fit : band);
+  }
+  const rate = (p, k) => p[2 + KEYS.indexOf(k)];
+
+  // f is how far through the game, 0 to 1.
+  function clock(s, f) {
+    if (s.sport === 'soc') return `${Math.max(1, Math.round(f * 88))}′`;
+    const el = f * 48, q = Math.min(4, Math.floor(el / 12) + 1), left = q * 12 - el, mm = Math.floor(left);
+    return `Q${q} ${mm}:${String(Math.floor((left - mm) * 60)).padStart(2, '0')}`;
+  }
+
+  function moment(s, m, k, f) {
+    const c = cfg(s), vs = foe(s, m.tier, k === 'def');
+    const dbl = k === 'off' && R() < (s.fame - 40) / 150; // once you are famous, they send two
+    return { k, vs, dbl, f, clock: clock(s, f), x: ri(22, 78), text: pick(c.sit[k]).replace('{star}', vs[0]) + (dbl ? ' ' + c.sit.dbl : '') };
+  }
+
   function newMatch(s, kind) {
     const c = cfg(s), isFinal = kind === c.final;
     const oppTier = isFinal ? 1 : ri(1, 3);
     const opp = kind === 'Rivalry game' ? `${s.names.rival}’s ${pick(c.teams[oppTier].filter((t) => t !== s.team)).split(' ').pop()}` : pick(c.teams[oppTier].filter((t) => t !== s.team));
     const [us, them] = c.base(teamStr(s), [0, 82, 72, 62][oppTier] + (isFinal ? 4 : 0));
-    const order = ['off', 'def', 'off', 'def', 'clutch'];
-    const star = pick(POOL[s.sport].slice(0, 24).filter((p) => p[1] !== 'DF'))[0];
-    return {
-      kind, opp, star, us, them, i: 0, hits: 0, mine: 0, opt: null, res: null, done: null, isFinal,
-      moments: order.map((k) => ({ k, text: (k === 'clutch' ? c.sit.clutch : pick(c.sit[k])).replace('{star}', star), x: ri(22, 78) })),
-    };
+    const m = { kind, opp, us, them, bu: us, bt: them, tier: isFinal ? 0 : oppTier, i: 0, hits: 0, mine: 0, opt: null, res: null, done: null, isFinal, moments: [] };
+    const n = ri(3, 5), att = posOf(s).att;
+    const ks = Array.from({ length: n }, () => (R() < att ? 'off' : 'def'));
+    if (ks.every((k) => k === ks[0])) ks[ri(0, n - 1)] = ks[0] === 'off' ? 'def' : 'off'; // always some of each
+    const fs = ks.map(() => R() * 0.9).sort((a, b) => a - b);
+    m.moments = ks.map((k, i) => moment(s, m, k, fs[i]));
+    m.moments.push({ k: 'last' }); // decided by the score when you get there
+    return m;
+  }
+
+  // A close game ends on a clutch moment: with the ball if you are level or behind, guarding their best if you are ahead.
+  function settle(s, m) {
+    if (m.moments[m.i].k !== 'last') return;
+    const c = cfg(s), gap = m.us - m.them;
+    if (Math.abs(gap) > (s.sport === 'bb' ? 3 : 1)) { m.moments[m.i] = moment(s, m, R() < posOf(s).att ? 'off' : 'def', 0.92 + R() * 0.07); return; }
+    const k = gap > 0 ? 'def' : 'off', vs = foe(s, Math.max(0, m.tier - 1), k === 'def'), secs = ri(4, 12);
+    const text = c.sit[gap > 0 ? 'ahead' : gap < 0 ? 'behind' : 'level'].replace('{gap}', Math.abs(gap)).replace('{secs}', secs).replace('{star}', vs[0]);
+    m.moments[m.i] = { k, vs, clutch: 1, dbl: false, f: 1, x: ri(30, 70), text, clock: s.sport === 'bb' ? `Q4 0:${String(secs).padStart(2, '0')}` : `90+${ri(1, 5)}′` };
+  }
+
+  // The score on screen grows with the clock; m.us and m.them are what it will be at full time.
+  function scoreAt(m) {
+    const mo = m.moments[m.i], f = m.done || !mo || mo.f === undefined ? 1 : mo.f;
+    return [Math.round(m.us - (m.bu || 0) * (1 - f)), Math.round(m.them - (m.bt || 0) * (1 - f))];
   }
 
   function optsFor(s, kind) {
-    const c = cfg(s), list = kind === 'def' ? c.def : c.off;
-    if (s.sport === 'bb' && kind !== 'def' && build(s) === 'tall') return list.map((o) => (o.k === 'drv' ? Object.assign({}, o, { l: 'Rise up and dunk', ok: 'You hammer it down. The bench is on its feet.', no: 'Met at the rim and sent back.', bonus: 4 }) : o));
-    return list;
+    const c = cfg(s);
+    return posOf(s)[kind === 'def' ? 'def' : 'off'].map((id) => (id === 'drive' && build(s) === 'tall'
+      ? Object.assign({}, c.opts[id], { l: 'Rise up and dunk', ok: 'You hammer it down. The bench is on its feet.', no: 'Met at the rim and sent back.', bonus: 4 })
+      : c.opts[id]));
   }
 
-  // Green zone grows with the rating; the marker speeds up when it matters.
-  function zone(s, key, clutch) {
-    const st = s.st[key], g = clamp(8 + (st - 40) * 0.42, 8, 34);
-    return { c: ri(28, 72), g, y: 9, period: (clutch ? 780 : 1050) * (0.85 + s.st.cmp / 400) * (s.f.injured ? 0.85 : 1) };
+  // The green grows with your rating against his and shrinks when they double you.
+  // The marker gets quicker as you get famous (they scout you) and in the clutch.
+  function zone(s, o, mo) {
+    const edge = s.st[o.k] - rate(mo.vs, o.vs);
+    const g = clamp(13 + edge * 0.45 + (o.bonus || 0) - (mo.dbl ? 5 : 0) + (o.mech === 'double' ? 3 : 0), 4, 30);
+    const y = clamp(6 + edge * 0.12, 3, 9);
+    const period = 1100 * (0.85 + s.st.cmp / 400) / (1 + s.fame / 250) * (mo.clutch ? 0.8 : 1) * (s.health < 50 ? 0.88 : 1) * (o.mech === 'react' ? 1.25 : 1);
+    const a = o.mech === 'drift' ? ri(12, 20) : 0, lo = Math.ceil(g / 2 + y + a);
+    const c = o.mech === 'react' ? ri(45, Math.floor(100 - g / 2 - y)) : ri(lo, 100 - lo);
+    return { mech: o.mech, c, g, y, a, dp: ri(1300, 1900), period, need: o.mech === 'double' ? 2 : 1, marks: [] };
   }
+  // Where the green is centred t ms after the meter started. The screen draws it with this too.
+  const zoneAt = (z, t) => (z.a ? z.c + z.a * Math.sin((t / z.dp) * 2 * Math.PI) : z.c);
 
   function pickOpt(s, i) {
-    const m = s.cur.m, mo = m.moments[m.i], c = cfg(s);
-    const o = optsFor(s, mo.k)[i];
-    m.opt = i; m.z = zone(s, o.k, mo.k === 'clutch');
-    m.z.g += o.bonus || 0;
+    const m = s.cur.m, mo = m.moments[m.i];
+    m.opt = i; m.z = zone(s, optsFor(s, mo.k)[i], mo);
   }
 
-  // pos is where the marker stopped, 0 to 100.
-  function stop(s, pos) {
-    const m = s.cur.m, mo = m.moments[m.i], c = cfg(s);
+  // pos is where the marker stopped, 0 to 100; t is ms since the meter started.
+  function stop(s, pos, t = 0) {
+    const m = s.cur.m, mo = m.moments[m.i], z = m.z;
     const o = optsFor(s, mo.k)[m.opt];
-    const dist = Math.abs(pos - m.z.c);
-    const q = dist <= m.z.g / 2 ? 'g' : dist <= m.z.g / 2 + m.z.y ? 'y' : 'r';
+    const dist = Math.abs(pos - zoneAt(z, t));
+    z.marks.push(dist <= z.g / 2 ? 'g' : dist <= z.g / 2 + z.y ? 'y' : 'r');
+    if (z.marks.length < z.need) { const lo = Math.ceil(z.g / 2 + z.y); z.c = ri(lo, 100 - lo); return; } // second touch, somewhere new
+    const q = z.marks.includes('r') ? 'r' : z.marks.includes('y') ? 'y' : 'g';
     const hit = q === 'g' || (q === 'y' && R() < 0.45);
     let text;
     if (hit) {
@@ -526,17 +682,17 @@
       if (conceded) m.them += o.lose;
       text = conceded || !o.noNo ? o.no : o.noNo;
     }
-    m.res = { q, hit, text: text.replace('{star}', m.star) };
+    m.res = { q, hit, late: z.mech === 'react' && pos >= 100, text: text.replace('{star}', mo.vs[0]) };
   }
 
   function nextMoment(s) {
     const m = s.cur.m;
     m.opt = null; m.res = null; m.z = null;
-    if (++m.i < m.moments.length) return;
+    if (++m.i < m.moments.length) return settle(s, m);
     const bb = s.sport === 'bb';
     if (bb && m.us === m.them) (R() < 0.5 ? (m.us += 2) : (m.them += 2)); // overtime
     const g = m.hits / m.moments.length;
-    const grade = ['F', 'D', 'C', 'B', 'A', 'A+'][m.hits];
+    const grade = g >= 1 ? 'A+' : g >= 0.8 ? 'A' : g >= 0.6 ? 'B' : g >= 0.4 ? 'C' : g > 0 ? 'D' : 'F';
     const win = m.us > m.them, draw = m.us === m.them;
     s.grades.push(g);
     const d = ch(s, { coach: Math.round((g - 0.5) * 16), fame: win ? 2 + (m.isFinal ? 8 : 0) : 0, morale: win ? 5 : draw ? 0 : -5, heat: m.kind === 'Rivalry game' ? 6 : 0 });
@@ -545,11 +701,18 @@
     say(s, `${m.kind}: ${win ? 'beat' : draw ? 'drew with' : 'lost to'} ${m.opp} ${m.us}–${m.them}. Grade ${grade}.`);
   }
 
+  // Saves from before positions: give them one and restart any match in progress.
+  function migrate(s) {
+    if (s.v !== 2) return;
+    s.v = 3; s.pos = cfg(s).pos[s.sport === 'bb' ? 2 : 0].id;
+    if (s.cur.t === 'match') s.cur.m = newMatch(s, s.cur.m.kind);
+  }
+
   // ---------- end of season ----------
   function endSeason(s) {
     const c = cfg(s), o = ovr(s), g = s.grades.length ? avg(s.grades) : 0.5, last = s.name.split(' ').pop().toUpperCase();
     const mf = clamp(0.55 + s.coach / 250 + (o - 70) / 120 + (g - 0.5) * 0.2 + (s.morale - 50) / 400, 0.3, 1.1) * (s.f.injured ? 0.45 : 1);
-    const line = c.line(s.st, mf), str = teamStr(s);
+    const line = c.line(s.st, mf, posOf(s).w), str = teamStr(s);
     const title = s.final === 'won';
     const awards = [];
     if (title) { awards.push('Champion'); s.titles++; }
@@ -643,6 +806,6 @@
     return { score, rank, ribbon, worth: w, n };
   }
 
-  const G = { SPORTS, KEYS, ORIGINS, ORIG, POOL, optsFor, build, fmtH, ARC, EV, ACTS, FUNDS, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, invest, cashOut, legacy, ovr, worth, money, tx };
+  const G = { SPORTS, KEYS, ORIGINS, ORIG, POOL, optsFor, scoreAt, posOf, rate, zoneAt, redraw, migrate, build, fmtH, ARC, EV, ACTS, FUNDS, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, invest, cashOut, legacy, ovr, worth, money, tx };
   if (typeof module !== 'undefined') module.exports = G; else root.G = G;
 })(this);

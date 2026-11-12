@@ -7,9 +7,10 @@
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   let s = null, tab = 'career', lastStep = '', installEvt = null, rolling = false;
-  const draft = { name: '', sport: 'bb', arch: 'sniper', origin: 'single', story: '', look: { skin: 4, hair: 'fade', beard: 0, band: 0 } };
+  let draft = { name: '', sport: 'bb', pos: 'PG', arch: 'sniper', origin: 'single', story: '', look: { skin: 4, hair: 'fade', beard: 0, band: 0 } };
   try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) { s = null; }
-  if (s && s.v !== 2) s = null; // older saves predate ceilings and height
+  if (s && s.v === 2) G.migrate(s);
+  if (s && s.v !== 3) s = null; // older saves predate ceilings and height
   const save = () => { try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY); } catch (e) { /* private mode: play on without saving */ } };
 
   // ---------- small pieces ----------
@@ -59,6 +60,7 @@
   function setup() {
     const sp = G.SPORTS[draft.sport], l = draft.look;
     if (!sp.arch.some((a) => a.id === draft.arch)) draft.arch = sp.arch[0].id;
+    if (!sp.pos.some((p) => p.id === draft.pos)) draft.pos = sp.pos[0].id;
     return `<section class="step">
       <h2 class="headline">Your career, in headlines</h2>
       <p class="stand">Play the big moments yourself. Live with everything else: the coach, the money, the people at home.</p>
@@ -66,6 +68,9 @@
       <fieldset><legend class="field">Sport</legend><div class="seg">
         ${Object.entries(G.SPORTS).map(([k, v]) => `<button type="button" class="choice" data-a="sport" data-k="${k}" aria-pressed="${draft.sport === k}">${v.name}</button>`).join('')}
       </div></fieldset>
+      <fieldset><legend class="field">Position</legend><div class="seg">
+        ${sp.pos.map((p) => `<button type="button" class="choice" data-a="pos" data-k="${p.id}" aria-pressed="${draft.pos === p.id}">${p.n}</button>`).join('')}
+      </div><p class="hint">${esc(sp.pos.find((p) => p.id === draft.pos).d)} It decides your moves in matches and who you get your height from.</p></fieldset>
       <fieldset><legend class="field">Kind of player</legend><ul class="choices">
         ${sp.arch.map((a) => `<li><button type="button" class="choice" data-a="arch" data-k="${a.id}" aria-pressed="${draft.arch === a.id}">${a.n}</button><p class="hint">${a.d}</p></li>`).join('')}
       </ul></fieldset>
@@ -96,11 +101,12 @@
     return `<section class="step still">
       <p class="meta">The draw · ${frame ? 'Last spin' : `Pick ${n + 1} of 6`}</p>
       <h2 class="title">${frame ? 'Now, a body' : 'Built from the greats'}</h2>
-      <p class="text">${frame ? 'One more spin. You get this player’s height, and it changes how you play.' : 'Each spin lands on a real player. Take one of his ratings: it becomes your ceiling there. You start well below it and grow into it.'}</p>
+      <p class="text">${frame ? `One more spin, from players who played ${esc(G.posOf(s).n.toLowerCase())}. You get his height, and it changes how you play.` : `Each spin lands on a real player, great or not: all ${G.POOL[s.sport].length} are equally likely. Take one of his ratings and it becomes your ceiling there. You start well below it and grow into it.`}</p>
       ${reel}${card}
       ${!c.card ? btn('spin', frame ? 'Spin for your frame' : 'Spin', 'style="margin-top:var(--space-md)"') : ''}
       ${frame ? '' : `<ul class="slots">${G.KEYS.map((k) => `<li><button data-a="place" data-k="${k}" ${!show || s.cap[k] ? 'disabled' : ''}><span>${st[k]}${s.cap[k] ? `<small>${esc(last(s.src[k]))}</small>` : ''}</span>${s.cap[k] ? `<span class="v">${s.st[k]} → ${s.cap[k]}</span>` : show ? `<span class="open">Take ${c.card.r[k]}</span>` : `<span class="v">—</span>`}</button></li>`).join('')}</ul>`}
       ${respin}
+      <p style="margin-top:var(--space-lg)">${n || c.card ? `<button class="link" data-a="redraw">Start the draw over</button> · ` : ''}<button class="link" data-a="setup">Change sport, position or looks</button></p>
     </section>`;
   }
 
@@ -112,7 +118,8 @@
   function stepCard() {
     const c = s.cur, sp = G.SPORTS[s.sport];
     if (c.t === 'signed') return `<p class="meta">${sp.entry}</p><figure class="photo">${me()}<figcaption>${G.fmtH(s.sport, s.h)}, like ${esc(last(s.src.h))}</figcaption></figure><h2 class="headline">${esc(s.team)}</h2><p class="stand">${esc(c.text)}</p><p class="text">${esc(backstory())}</p>
-      <ul class="bars wide" style="margin-top:var(--space-lg)">${ratings(sp)}</ul>${btn('cont', 'Start season one')}`;
+      <ul class="bars wide" style="margin-top:var(--space-lg)">${ratings(sp)}</ul>${btn('cont', 'Start season one')}
+      <p style="margin-top:var(--space-md)"><button class="link" data-a="redraw">Not happy with the build? Draw again</button></p>`;
     if (c.t === 'arc') return `<p class="meta">Off-season · Age ${s.age}</p><h2 class="title">How do you spend the summer?</h2>` + (c.out ? out(c)
       : `<ul class="choices">${c.opts.map((id, i) => `<li>${choice('arc', i, G.tx(s, G.ARC[id].n))}<p class="hint">${esc(G.ARC[id].d)}</p></li>`).join('')}</ul>`);
     if (c.t === 'event') {
@@ -141,19 +148,22 @@
 
   function match(m, sp) {
     const head = `<p class="meta">${esc(m.kind)}${m.done ? ' · Full time' : ` · Moment ${m.i + 1} of ${m.moments.length}`}</p>
-      <div class="score"><span>${esc(last(s.team))}</span><b>${m.us}</b><b>${m.them}</b><span>${esc(last(m.opp))}</span></div>`;
+      <div class="score"><span>${esc(last(s.team))}</span><b>${G.scoreAt(m)[0]}</b><b>${G.scoreAt(m)[1]}</b><span>${esc(last(m.opp))}</span></div>`;
     if (m.done) return head + `<span class="grade" aria-label="Grade ${m.done.grade}">${m.done.grade}</span>
       <p class="res">${m.done.win ? 'A win.' : m.done.draw ? 'A draw.' : 'A defeat.'} You came through in ${m.hits} of ${m.moments.length} moments${m.mine ? ` and scored ${m.mine}` : ''}.</p>${deltas(m.done.d)}${btn('cont', 'Continue')}`;
-    const mo = m.moments[m.i], opts = G.optsFor(s, mo.k);
+    const mo = m.moments[m.i], opts = G.optsFor(s, mo.k), him = last(mo.vs[0]);
+    const who = `<p class="meta">${esc(mo.clock)}${mo.clutch ? ' · Clutch' : ''} · ${mo.k === 'def' ? 'Coming at you' : 'Marking you'}: ${esc(mo.vs[0])}</p>`;
     let body;
-    if (m.res) body = `<p class="res">${esc(m.res.text)}</p><p class="hint">${m.res.q === 'g' ? 'In the green.' : m.res.q === 'y' ? (m.res.hit ? 'Close enough, this time.' : 'Close, but not enough.') : 'Well off.'}</p>${btn('next', m.i + 1 < m.moments.length ? 'Next moment' : 'Full time')}`;
+    if (m.res) body = `<p class="res">${esc(m.res.text)}</p><p class="hint">${m.res.q === 'g' ? 'In the green.' : m.res.q === 'y' ? (m.res.hit ? 'Close enough, this time.' : 'Close, but not enough.') : m.res.late ? 'Too late.' : 'Well off.'}</p>${btn('next', m.i + 1 < m.moments.length ? 'Next moment' : 'Full time')}`;
     else if (m.opt !== null) {
-      const z = m.z, fl = z.c - z.g / 2 - z.y;
-      body = `<p class="text"><b>${esc(opts[m.opt].l)}.</b> Stop the marker in the green.</p>
-        <div class="meter" id="meter"><i class="fair" style="left:${fl}%;width:${z.g + 2 * z.y}%"></i><i class="good" style="left:${z.c - z.g / 2}%;width:${z.g}%"></i><b class="mark" id="mark"></b></div>
+      const z = m.z, c = G.zoneAt(z, 0);
+      const how = { sweep: 'Stop the marker in the green.', drift: 'The gap is moving. Catch it.', double: `Two touches: stop it in the green twice. Touch ${z.marks.length + 1} of 2.`, react: 'One pass only. Stop it before it runs out.' }[z.mech];
+      body = `<p class="text"><b>${esc(opts[m.opt].l)}.</b> ${how}</p>
+        <div class="meter" id="meter"><i class="fair" id="fair" style="left:${c - z.g / 2 - z.y}%;width:${z.g + 2 * z.y}%"></i><i class="good" id="good" style="left:${c - z.g / 2}%;width:${z.g}%"></i><b class="mark" id="mark"></b></div>
         ${btn('stop', 'Stop', 'id="stop"')}`;
-    } else body = `<p class="text">${esc(mo.text)}</p><div class="choices">${opts.map((o, i) => choice('opt', i, o.l)).join('')}</div><p class="hint">Your ${opts.map((o) => `${sp.stats[o.k].toLowerCase()} is ${s.st[o.k]}`).join(', ')}. Higher means a wider green.</p>`;
-    return head + court(s.sport, mo.k, mo.x) + body;
+    } else body = `<p class="text">${esc(mo.text)}</p><div class="choices">${opts.map((o, i) => choice('opt', i, o.l)).join('')}</div>
+      <ul class="notes">${opts.map((o) => `<li>${esc(o.l)}: your ${sp.stats[o.k].toLowerCase()} ${s.st[o.k]} v his ${sp.stats[o.vs].toLowerCase()} ${G.rate(mo.vs, o.vs)}</li>`).join('')}</ul><p class="hint">The bigger your edge over ${esc(him)}, the wider the green.</p>`;
+    return head + who + court(s.sport, mo.k, mo.x) + body;
   }
 
   function career() {
@@ -166,7 +176,7 @@
 
   function life() {
     const sp = G.SPORTS[s.sport];
-    return `<section class="step still"><figure class="photo">${me()}<figcaption>${G.fmtH(s.sport, s.h)} · ${G.build(s) === 'mid' ? 'average build' : G.build(s) + ' for the game'}</figcaption></figure>
+    return `<section class="step still"><figure class="photo">${me()}<figcaption>${G.posOf(s).n} · ${sp.arch.find((a) => a.id === s.arch).n} · ${G.fmtH(s.sport, s.h)}, ${G.build(s) === 'mid' ? 'average build' : G.build(s) + ' for the game'}</figcaption></figure>
       <h2 class="title">Overall ${G.ovr(s)}</h2><p class="hint">Now, and your ceiling. You grow towards it until 26.</p>
       <ul class="bars wide" style="margin-top:var(--space-sm);clear:both">${ratings(sp)}</ul>
       <h2 class="sub">People</h2><ul class="bars">
@@ -206,7 +216,7 @@
     const sp = G.SPORTS[s.sport];
     $('#dateline').textContent = !playing ? sp.name : `Season ${s.seasons.length + (['report', 'end'].includes(s.cur.t) ? 0 : 1)} · Age ${s.age}`;
     if (playing) {
-      $('#strip').innerHTML = `<span class="who"><b>${esc(s.name)}</b> · ${sp.arch.find((a) => a.id === s.arch).n} · ${esc(s.team)}</span><span class="cash">${G.money(s.money)}</span>`;
+      $('#strip').innerHTML = `<span class="who"><b>${esc(s.name)}</b> · ${G.posOf(s).n} · ${esc(s.team)}</span><span class="cash">${G.money(s.money)}</span>`;
       document.querySelectorAll('#tabs button').forEach((b) => (b.dataset.k === tab ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
     }
     view.innerHTML = !playing ? draw() : tab === 'life' ? life() : tab === 'money' ? moneyTab() : tab === 'record' ? record() : career();
@@ -214,22 +224,35 @@
   }
 
   // The marker sweeps back and forth; where it stops decides the moment.
-  let meterPos = null, raf = 0;
+  // drift: the green moves too. react: one pass, and running out counts as a miss.
+  let meterPos = null, meterT = 0, raf = 0;
   function runMeter() {
-    const mark = $('#mark'), w = $('#meter').clientWidth, period = s.cur.m.z.period, t0 = performance.now();
+    const z = s.cur.m.z, mark = $('#mark'), good = $('#good'), fair = $('#fair'), w = $('#meter').clientWidth, t0 = performance.now();
     cancelAnimationFrame(raf);
     const tick = (now) => {
-      const p = ((now - t0) / period) % 2;
-      meterPos = (p < 1 ? p : 2 - p) * 100;
+      meterT = now - t0;
+      const p = meterT / z.period;
+      if (z.mech === 'react' && p >= 1) { meterPos = 100; on.stop(); save(); render(); return; }
+      meterPos = (z.mech === 'react' ? p : p % 2 < 1 ? p % 2 : 2 - (p % 2)) * 100;
       mark.style.transform = `translateX(${(meterPos / 100) * w}px)`;
+      if (z.a) { const c = G.zoneAt(z, meterT); good.style.left = c - z.g / 2 + '%'; fair.style.left = c - z.g / 2 - z.y + '%'; }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     $('#stop').focus({ preventScroll: true });
   }
 
+  // Back to the setup screen, filled in with this player so a new build is one tap away.
+  function toSetup() {
+    draft = { name: s.name, sport: s.sport, pos: s.pos, arch: s.arch, origin: s.origin, story: s.story, look: Object.assign({}, s.look) };
+    s = null; lastStep = ''; window.scrollTo(0, 0);
+  }
+
   const on = {
     sport: (b) => { draft.sport = b.dataset.k; },
+    pos: (b) => { draft.pos = b.dataset.k; },
+    redraw: () => { if (s.cur.t === 'draw' || confirm('Throw this build away and draw again?')) { G.redraw(s); lastStep = ''; window.scrollTo(0, 0); } },
+    setup: () => { if (6 - s.cur.left.length === 0 && !s.cur.card || confirm('Go back to setup? This draw will be lost.')) toSetup(); },
     arch: (b) => { draft.arch = b.dataset.k; },
     origin: (b) => { draft.origin = b.dataset.k; },
     look: (b) => { draft.look[b.dataset.k] = b.dataset.k === 'hair' ? b.dataset.v : +b.dataset.v; },
@@ -245,13 +268,13 @@
     arc: (b) => G.takeArc(s, +b.dataset.i),
     ev: (b) => G.choose(s, +b.dataset.i),
     opt: (b) => G.pickOpt(s, +b.dataset.i),
-    stop: () => { cancelAnimationFrame(raf); G.stop(s, meterPos === null ? 0 : meterPos); meterPos = null; },
+    stop: () => { cancelAnimationFrame(raf); G.stop(s, meterPos === null ? 0 : meterPos, meterT); meterPos = null; },
     next: () => G.nextMoment(s),
     tab: (b) => { tab = b.dataset.k; window.scrollTo(0, 0); },
     act: (b) => G.act(s, b.dataset.k),
     invest: (b) => G.invest(s, b.dataset.k),
     cash: (b) => G.cashOut(s, +b.dataset.i),
-    fresh: () => { if (s.cur.t === 'end' || confirm('Abandon this career? It cannot be brought back.')) { s = null; lastStep = ''; } },
+    fresh: () => { if (s.cur.t === 'end' || confirm('Abandon this career? It cannot be brought back.')) toSetup(); },
     install: () => { installEvt.prompt(); installEvt = null; },
   };
 
