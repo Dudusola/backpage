@@ -6,7 +6,8 @@ const ranks = {}, ribbons = {}; let seasons = 0, titles = 0, N = 400;
 for (let n = 0; n < N; n++) {
   const sport = n % 2 ? 'bb' : 'soc';
   const s = G.create({ name: 'Test Player', sport, arch: G.SPORTS[sport].arch[n % 3].id, origin: G.ORIGINS[n % 6].id, story: 'x' });
-  while (s.cur.t === 'draw') { G.spin(s); G.place(s, s.cur.left[0]); }
+  while (s.cur.t === 'draw') { G.spin(s); if (pick(4) === 0) G.spin(s); G.place(s, s.cur.left[pick(s.cur.left.length)]); }
+  assert(s.h > 0 && G.KEYS.every((k) => s.cap[k] >= 30), 'draw incomplete');
   let guard = 0;
   while (s.cur.t !== 'end') {
     assert(++guard < 2000, 'career never ended');

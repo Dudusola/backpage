@@ -39,4 +39,11 @@
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --dur-short: 120ms; --dur-med: 240ms;
   --tabs-h: 56px;
+
+  /* people: skin, hair and kit colours for the portraits */
+  --skin-1: oklch(88% 0.04 70); --skin-2: oklch(79% 0.06 65); --skin-3: oklch(68% 0.08 60);
+  --skin-4: oklch(55% 0.08 55); --skin-5: oklch(43% 0.07 50); --skin-6: oklch(33% 0.05 45);
+  --hair: oklch(22% 0.02 50); --hair-grey: oklch(72% 0.01 80);
+  --kit-1: oklch(53% 0.2 27); --kit-2: oklch(40% 0.12 255); --kit-3: oklch(50% 0.12 150);
+  --kit-4: oklch(74% 0.14 85); --kit-5: oklch(34% 0.02 60); --kit-6: oklch(50% 0.13 300);
 }

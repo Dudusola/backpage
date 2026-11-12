@@ -19,6 +19,7 @@
         { id: 'enforcer', n: 'Enforcer', d: 'Nobody scores easy on your watch.', m: { def: 8, sho: -4 } },
       ],
       teams: [null, ['Harbor City Kings', 'Northgate Comets'], ['Redwater Foxes', 'Lakeshore Herons'], ['Dustbowl Coyotes', 'Port Azure Gulls']],
+      body: { tall: 81, short: 75, mods: { tall: { drv: 3, def: 3, ath: -3, sho: -2 }, short: { ath: 3, pas: 2, drv: -2, def: -2 }, mid: {} } },
       mvp: 'MVP', star: 'All-Star', title: 'champions', final: 'The Finals', entry: 'Draft night', joined: 'Drafted by the {team}.', mid: 'went out in the play-offs',
       entryText: (t) => `With the eleventh pick, the ${t} take a chance on you. A four-year rookie deal and a locker by the door.`,
       base: (us, them) => [ri(84, 96) + Math.round((us - 70) / 2), ri(86, 98) + Math.round((them - 70) / 2)],
@@ -30,7 +31,7 @@
       },
       sit: {
         off: ['Shot clock at eight. Your man is sagging off you.', 'Fast break, two against one.', 'Out of the timeout, the play is drawn for you.', 'A switch leaves a slower defender on you.'],
-        def: ['Their scorer isolates on you at the top of the key.', 'The pick and roll is coming straight at you.', 'They push the ball in transition.'],
+        def: ['{star} isolates on you at the top of the key.', 'The pick and roll is coming straight at you.', 'They push the ball in transition.'],
         clutch: 'Down one. Nine seconds left. The ball is in your hands.',
       },
       off: [
@@ -40,7 +41,7 @@
       ],
       def: [
         { l: 'Jump the passing lane', k: 'ath', pts: 2, ok: 'Steal. You take it coast to coast.', no: 'You gambled. The open three drops.', lose: 3 },
-        { l: 'Stay down and contest', k: 'def', pts: 0, ok: 'A hand in the face. Tough miss.', no: 'Your man rises over you and scores.', lose: 2 },
+        { l: 'Stay down and contest', k: 'def', pts: 0, ok: 'A hand in the face. Tough miss.', no: '{star} rises over you and scores.', lose: 2 },
       ],
     },
     soc: {
@@ -52,6 +53,7 @@
         { id: 'destroyer', n: 'Destroyer', d: 'Wins the ball, and the argument.', m: { def: 8, sho: -4 } },
       ],
       teams: [null, ['Castellan CF', 'Northgate Athletic'], ['Redwater Rovers', 'Lakeshore United'], ['Dunmore Town', 'Port Azure FC']],
+      body: { tall: 188, short: 174, mods: { tall: { def: 3, sho: 1, ath: -3 }, short: { ath: 3, drv: 3, def: -3 }, mid: {} } },
       mvp: 'Player of the Year', star: 'Team of the Season', title: 'champions', final: 'The Cup Final', entry: 'Signing day', joined: 'Signed by {team} from the academy.', mid: 'finished in the top half',
       entryText: (t) => `${t} sign you from the academy. A four-year deal, the number 27 shirt and a seat at the back of the bus.`,
       base: (us, them) => [(R() < 0.3 + (us - 70) / 100 ? 1 : 0), (R() < 0.4 + (them - 70) / 100 ? 1 : 0)],
@@ -63,7 +65,7 @@
       },
       sit: {
         off: ['You pick the ball up between the lines.', 'A counter-attack, three against two.', 'The full-back shows you the outside.', 'A loose ball drops to you on the edge of the box.'],
-        def: ['Their winger runs straight at you.', 'A through ball is played in behind.', 'Their number ten turns in the pocket.'],
+        def: ['{star} runs straight at you.', 'A through ball is played in behind.', 'Their number ten turns in the pocket.'],
         clutch: 'Ninetieth minute, level. The ball breaks to you in the box.',
       },
       off: [
@@ -73,7 +75,7 @@
       ],
       def: [
         { l: 'Slide in', k: 'ath', pts: 0, ok: 'A clean tackle. The crowd roars.', no: 'Mistimed. They score from the free kick.', noNo: 'Mistimed. The free kick comes to nothing.', lose: 1, lp: 0.5 },
-        { l: 'Hold your position', k: 'def', pts: 0, ok: 'You shepherd him wide. Danger over.', no: 'He cuts inside and finishes.', noNo: 'He cuts inside and blazes over.', lose: 1, lp: 0.6 },
+        { l: 'Hold your position', k: 'def', pts: 0, ok: 'You shepherd him wide. Danger over.', no: '{star} cuts inside and finishes.', noNo: 'He cuts inside and blazes over.', lose: 1, lp: 0.6 },
       ],
     },
   };
@@ -83,13 +85,40 @@
   const PARTNERS = ['Amara', 'Zainab', 'Sofia', 'Kemi', 'Elena', 'Tolu', 'Maya', 'Ada', 'Jordan', 'Sam', 'Ife', 'Noor'];
   const person = () => `${pick(FIRST)} ${pick(LAST)}`;
 
-  // The reel in the Draw. Fictional, so no licence trouble.
-  const LEGENDS = [
-    ['“Sunday” Okafor', 'street-court legend'], ['Old Man Varga', 'thirty years a pro'], ['Coach Bisi', 'your first coach'],
-    ['Uncle Deji', 'never missed a Saturday game'], ['The Twins', 'two against one, every evening'], ['Mama’s rules', 'home before dark, or else'],
-    ['“Ghost” Reyes', 'nobody ever saw him train'], ['Mr Lindqvist', 'PE teacher, former international'], ['The cage', 'concrete, chain nets, no fouls'],
-    ['Big cousin Kofi', 'never once let you win'], ['A worn-out tape', 'the same highlights, a thousand times'], ['Rainy season', 'you played anyway'],
-  ];
+  // The reel in the Draw: real players. The ratings are our own opinion, not official data.
+  // [name, position, sho, drv, pas, def, ath, cmp, height (inches for bb, cm for soc)]. First 24 of each are active players.
+  const POOL = {
+    bb: [
+      ['Stephen Curry', 'G', 99, 84, 90, 66, 80, 96, 74], ['LeBron James', 'F', 82, 97, 95, 88, 95, 93, 81], ['Kevin Durant', 'F', 96, 93, 80, 80, 86, 94, 83],
+      ['Giannis Antetokounmpo', 'F', 68, 99, 82, 93, 98, 84, 83], ['Nikola Jokic', 'C', 86, 93, 99, 76, 62, 95, 83], ['Luka Doncic', 'G', 90, 92, 97, 68, 72, 93, 79],
+      ['Shai Gilgeous-Alexander', 'G', 88, 97, 85, 86, 88, 93, 78], ['Jayson Tatum', 'F', 88, 89, 80, 85, 86, 86, 80], ['Joel Embiid', 'C', 82, 96, 74, 90, 78, 82, 84],
+      ['Anthony Edwards', 'G', 87, 94, 76, 82, 97, 88, 76], ['Victor Wembanyama', 'C', 80, 90, 74, 99, 88, 82, 88], ['Kawhi Leonard', 'F', 88, 90, 76, 97, 84, 96, 79],
+      ['Damian Lillard', 'G', 95, 86, 86, 62, 80, 97, 74], ['Kyrie Irving', 'G', 92, 96, 84, 66, 84, 94, 74], ['Jimmy Butler', 'F', 76, 90, 82, 90, 82, 96, 79],
+      ['Devin Booker', 'G', 92, 89, 82, 70, 80, 90, 77], ['Ja Morant', 'G', 74, 96, 88, 66, 98, 86, 74], ['Donovan Mitchell', 'G', 88, 92, 78, 72, 90, 88, 75],
+      ['Jalen Brunson', 'G', 88, 92, 86, 66, 74, 95, 74], ['Tyrese Haliburton', 'G', 88, 80, 97, 68, 78, 90, 77], ['Anthony Davis', 'C', 74, 93, 70, 97, 88, 82, 82],
+      ['Draymond Green', 'F', 62, 70, 90, 96, 76, 88, 78], ['Rudy Gobert', 'C', 40, 82, 52, 98, 80, 72, 85], ['Klay Thompson', 'G', 96, 72, 66, 80, 70, 90, 78],
+      ['Chris Paul', 'G', 84, 78, 98, 84, 66, 96, 72], ['Michael Jordan', 'G', 86, 99, 82, 96, 97, 99, 78], ['Kobe Bryant', 'G', 90, 96, 80, 92, 92, 99, 78],
+      ['Magic Johnson', 'G', 74, 90, 99, 78, 84, 95, 81], ['Larry Bird', 'F', 96, 86, 92, 80, 68, 97, 81], ['Shaquille O\u2019Neal', 'C', 40, 99, 68, 90, 92, 84, 85],
+      ['Tim Duncan', 'C', 72, 92, 76, 97, 78, 95, 83], ['Hakeem Olajuwon', 'C', 70, 96, 68, 99, 90, 92, 84], ['Allen Iverson', 'G', 80, 96, 84, 74, 97, 92, 72],
+      ['Dirk Nowitzki', 'F', 95, 86, 70, 66, 64, 94, 84], ['Kareem Abdul-Jabbar', 'C', 70, 99, 76, 92, 80, 94, 86], ['Ray Allen', 'G', 98, 80, 72, 72, 80, 95, 77],
+      ['Dennis Rodman', 'F', 40, 62, 60, 98, 90, 80, 79], ['Steve Nash', 'G', 93, 80, 98, 54, 72, 93, 75], ['Vince Carter', 'G', 86, 93, 74, 70, 99, 84, 78],
+    ],
+    soc: [
+      ['Lionel Messi', 'FW', 96, 99, 96, 40, 82, 97, 170], ['Cristiano Ronaldo', 'FW', 97, 90, 82, 40, 90, 96, 187], ['Kylian Mbapp\u00e9', 'FW', 93, 94, 82, 40, 99, 90, 178],
+      ['Erling Haaland', 'FW', 97, 80, 68, 46, 94, 90, 195], ['Kevin De Bruyne', 'MF', 88, 88, 99, 64, 76, 92, 181], ['Mohamed Salah', 'FW', 92, 92, 86, 46, 93, 90, 175],
+      ['Vin\u00edcius J\u00fanior', 'FW', 86, 97, 80, 36, 97, 82, 176], ['Jude Bellingham', 'MF', 86, 90, 88, 80, 84, 92, 186], ['Lamine Yamal', 'FW', 84, 95, 88, 36, 90, 86, 180],
+      ['Harry Kane', 'FW', 96, 82, 90, 48, 70, 93, 188], ['Rodri', 'MF', 78, 82, 92, 92, 66, 96, 191], ['Luka Modri\u0107', 'MF', 78, 92, 96, 74, 72, 96, 172],
+      ['Virgil van Dijk', 'DF', 60, 72, 78, 97, 80, 95, 195], ['Victor Osimhen', 'FW', 90, 82, 68, 44, 94, 84, 186], ['Bukayo Saka', 'FW', 86, 92, 86, 60, 88, 88, 178],
+      ['Neymar', 'FW', 88, 98, 92, 36, 88, 84, 175], ['Robert Lewandowski', 'FW', 96, 84, 80, 44, 76, 92, 185], ['Pedri', 'MF', 74, 92, 94, 70, 76, 92, 174],
+      ['Declan Rice', 'MF', 72, 78, 86, 92, 78, 88, 188], ['William Saliba', 'DF', 44, 72, 78, 94, 86, 88, 192], ['Achraf Hakimi', 'DF', 72, 86, 84, 82, 96, 82, 181],
+      ['Florian Wirtz', 'MF', 84, 93, 92, 52, 80, 86, 177], ['Son Heung-min', 'FW', 92, 88, 82, 44, 90, 88, 183], ['Antoine Griezmann', 'FW', 88, 88, 90, 60, 78, 92, 176],
+      ['Pel\u00e9', 'FW', 97, 97, 92, 50, 92, 97, 173], ['Diego Maradona', 'FW', 92, 99, 94, 40, 86, 94, 165], ['Zinedine Zidane', 'MF', 86, 96, 96, 62, 74, 97, 185],
+      ['Ronaldo Naz\u00e1rio', 'FW', 98, 98, 80, 36, 97, 92, 183], ['Ronaldinho', 'FW', 88, 99, 94, 38, 86, 88, 181], ['Thierry Henry', 'FW', 94, 92, 84, 42, 97, 90, 188],
+      ['Jay-Jay Okocha', 'MF', 82, 98, 88, 50, 82, 84, 173], ['Paolo Maldini', 'DF', 50, 74, 78, 99, 82, 97, 186], ['Andr\u00e9s Iniesta', 'MF', 76, 96, 97, 62, 76, 96, 171],
+      ['Xavi', 'MF', 72, 88, 99, 68, 66, 97, 170], ['Nwankwo Kanu', 'FW', 86, 92, 84, 40, 74, 88, 197], ['Didier Drogba', 'FW', 93, 82, 74, 52, 86, 94, 188],
+      ['Samuel Eto\u2019o', 'FW', 94, 90, 78, 44, 95, 90, 180], ['Yaya Tour\u00e9', 'MF', 84, 86, 88, 84, 82, 90, 188], ['George Weah', 'FW', 92, 94, 78, 44, 96, 88, 184],
+    ],
+  };
 
   const LABEL = { coach: 'Coach', mates: 'Teammates', morale: 'Morale', fame: 'Fame', health: 'Fitness', money: 'Money', bond: 'Partner', heat: 'Rivalry' };
 
@@ -342,14 +371,14 @@
   }
 
   // ---------- career start ----------
-  function create({ name, sport, arch, origin, story }) {
+  function create({ name, sport, arch, origin, story, look }) {
     const s = {
-      v: 1, name: (name || '').trim().slice(0, 18) || 'The Kid', sport, arch, age: 18,
+      v: 2, cap: {}, src: {}, h: 0, look: Object.assign({ skin: 4, hair: 'fade', beard: 0, band: 0 }, look), name: (name || '').trim().slice(0, 18) || 'The Kid', sport, arch, age: 18,
       st: {}, coach: 55, mates: 50, morale: 60, fame: 5, health: 85, heat: 40, money: 20,
       partner: null, inv: [], f: {}, seen: {}, log: [], seasons: [], grades: [], days: 2, note: '',
       names: { coach: person(), mate: person(), rival: person(), exCoach: '' },
       team: '', tier: 3, teams: 0, contract: 4, salary: 0, titles: 0, mvps: 0, stars: 0, peak: 0,
-      steps: [], si: 0, cur: { t: 'draw', left: KEYS.slice(), card: null, respin: 1 },
+      steps: [], si: 0, cur: { t: 'draw', left: KEYS.slice(), card: null, respin: 2, used: [] },
     };
     s.origin = ORIG[origin] ? origin : 'steady';
     s.story = s.origin === 'own' ? (story || '').trim().slice(0, 90) : '';
@@ -361,21 +390,32 @@
   function spin(s) {
     const c = s.cur;
     if (c.card) { if (!c.respin) return; c.respin--; }
-    const l = pick(LEGENDS);
-    c.card = { n: l[0], d: l[1], r: 58 + Math.floor(Math.pow(R(), 1.4) * 39) };
+    const p = pick(POOL[s.sport].filter((x) => !c.used.includes(x[0])));
+    c.used.push(p[0]);
+    c.card = { n: p[0], pos: p[1], r: Object.fromEntries(KEYS.map((k, i) => [k, p[i + 2]])), h: p[8] };
+    c.reel = Array.from({ length: 11 }, () => pick(POOL[s.sport])[0]).concat(p[0]); // names that fly past
   }
 
+  // Take one thing from the player on the card: a rating (it becomes your ceiling) or, on the last spin, his frame.
   function place(s, key) {
     const c = s.cur;
-    if (!c.card || !c.left.includes(key)) return;
-    s.st[key] = c.card.r; c.card = null; c.left = c.left.filter((k) => k !== key);
-    if (c.left.length) return;
-    const a = cfg(s).arch.find((x) => x.id === s.arch);
-    const m = Object.assign({}, a.m), om = ORIG[s.origin].st;
-    for (const k in om) m[k] = (m[k] || 0) + om[k];
-    for (const k in m) s.st[k] = clamp(s.st[k] + m[k], 30, 99);
+    if (!c.card) return;
+    if (!c.left.length) { s.h = c.card.h; s.src.h = c.card.n; return signUp(s); }
+    if (!c.left.includes(key)) return;
+    s.cap[key] = c.card.r[key]; s.src[key] = c.card.n;
+    s.st[key] = clamp(c.card.r[key] - ri(10, 16), 30, 99); // you are 18: the ceiling is his, the rest is work
+    c.card = null; c.left = c.left.filter((k) => k !== key);
+  }
+
+  const build = (s) => { const b = cfg(s).body; return s.h >= b.tall ? 'tall' : s.h <= b.short ? 'short' : 'mid'; };
+  const fmtH = (sport, h) => (sport === 'bb' ? Math.floor(h / 12) + '\u2032' + (h % 12) + '\u2033' : (h / 100).toFixed(2) + ' m');
+
+  function signUp(s) {
+    const m = Object.assign({}, cfg(s).arch.find((x) => x.id === s.arch).m);
+    for (const add of [ORIG[s.origin].st, cfg(s).body.mods[build(s)]]) for (const k in add) m[k] = (m[k] || 0) + add[k];
+    for (const k in m) { s.st[k] = clamp(s.st[k] + m[k], 30, 99); s.cap[k] = clamp(s.cap[k] + m[k], 30, 99); }
     const o = ovr(s);
-    s.tier = o >= 76 ? 2 : 3; // good prospects still start low: room to climb
+    s.tier = o >= 74 ? 2 : 3; // good prospects still start low: room to climb
     s.team = pick(cfg(s).teams[s.tier]); s.teams = 1; s.salary = salaryFor(s.tier, o); s.peak = o;
     say(s, cfg(s).joined);
     s.cur = { t: 'signed', text: cfg(s).entryText(s.team) };
@@ -442,10 +482,17 @@
     const opp = kind === 'Rivalry game' ? `${s.names.rival}’s ${pick(c.teams[oppTier].filter((t) => t !== s.team)).split(' ').pop()}` : pick(c.teams[oppTier].filter((t) => t !== s.team));
     const [us, them] = c.base(teamStr(s), [0, 82, 72, 62][oppTier] + (isFinal ? 4 : 0));
     const order = ['off', 'def', 'off', 'def', 'clutch'];
+    const star = pick(POOL[s.sport].slice(0, 24).filter((p) => p[1] !== 'DF'))[0];
     return {
-      kind, opp, us, them, i: 0, hits: 0, mine: 0, opt: null, res: null, done: null, isFinal,
-      moments: order.map((k) => ({ k, text: k === 'clutch' ? c.sit.clutch : pick(c.sit[k]), x: ri(22, 78) })),
+      kind, opp, star, us, them, i: 0, hits: 0, mine: 0, opt: null, res: null, done: null, isFinal,
+      moments: order.map((k) => ({ k, text: (k === 'clutch' ? c.sit.clutch : pick(c.sit[k])).replace('{star}', star), x: ri(22, 78) })),
     };
+  }
+
+  function optsFor(s, kind) {
+    const c = cfg(s), list = kind === 'def' ? c.def : c.off;
+    if (s.sport === 'bb' && kind !== 'def' && build(s) === 'tall') return list.map((o) => (o.k === 'drv' ? Object.assign({}, o, { l: 'Rise up and dunk', ok: 'You hammer it down. The bench is on its feet.', no: 'Met at the rim and sent back.', bonus: 4 }) : o));
+    return list;
   }
 
   // Green zone grows with the rating; the marker speeds up when it matters.
@@ -456,14 +503,15 @@
 
   function pickOpt(s, i) {
     const m = s.cur.m, mo = m.moments[m.i], c = cfg(s);
-    const opts = mo.k === 'def' ? c.def : c.off;
-    m.opt = i; m.z = zone(s, opts[i].k, mo.k === 'clutch');
+    const o = optsFor(s, mo.k)[i];
+    m.opt = i; m.z = zone(s, o.k, mo.k === 'clutch');
+    m.z.g += o.bonus || 0;
   }
 
   // pos is where the marker stopped, 0 to 100.
   function stop(s, pos) {
     const m = s.cur.m, mo = m.moments[m.i], c = cfg(s);
-    const o = (mo.k === 'def' ? c.def : c.off)[m.opt];
+    const o = optsFor(s, mo.k)[m.opt];
     const dist = Math.abs(pos - m.z.c);
     const q = dist <= m.z.g / 2 ? 'g' : dist <= m.z.g / 2 + m.z.y ? 'y' : 'r';
     const hit = q === 'g' || (q === 'y' && R() < 0.45);
@@ -478,7 +526,7 @@
       if (conceded) m.them += o.lose;
       text = conceded || !o.noNo ? o.no : o.noNo;
     }
-    m.res = { q, hit, text };
+    m.res = { q, hit, text: text.replace('{star}', m.star) };
   }
 
   function nextMoment(s) {
@@ -538,8 +586,9 @@
 
     // the year takes its toll
     for (const k of KEYS) {
-      const a = s.age;
-      s.st[k] = clamp(s.st[k] + (a <= 23 ? ri(0, 2) : a <= 29 ? ri(-1, 1) : a <= 32 ? -ri(0, 2) - (k === 'ath' ? 1 : 0) : -ri(1, 3)), 30, 99);
+      const a = s.age, cap = s.cap[k] || 99;
+      if (a <= 26) s.st[k] = Math.max(s.st[k], Math.min(cap, s.st[k] + ri(1, 3)));
+      else s.st[k] = clamp(s.st[k] + (a <= 30 ? ri(-1, 0) : a <= 32 ? -ri(0, 2) - (k === 'ath' ? 1 : 0) : -ri(1, 3)), 30, 99);
     }
     s.coach = clamp(s.coach - 3 + (title ? 10 : 0)); s.mates = clamp(s.mates - 3 + (title ? 8 : 0));
     if (s.partner) s.partner.bond = clamp(s.partner.bond - (s.f.kids ? 3 : 6));
@@ -594,6 +643,6 @@
     return { score, rank, ribbon, worth: w, n };
   }
 
-  const G = { SPORTS, KEYS, ORIGINS, ORIG, ARC, EV, ACTS, FUNDS, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, invest, cashOut, legacy, ovr, worth, money, tx };
+  const G = { SPORTS, KEYS, ORIGINS, ORIG, POOL, optsFor, build, fmtH, ARC, EV, ACTS, FUNDS, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, invest, cashOut, legacy, ovr, worth, money, tx };
   if (typeof module !== 'undefined') module.exports = G; else root.G = G;
 })(this);
