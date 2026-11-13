@@ -8,10 +8,19 @@
 
   let s = null, tab = 'career', lastStep = '', installEvt = null, rolling = false;
   let draft = { name: '', sport: 'bb', pos: 'PG', country: 'NG', origin: 'single', story: '', look: { skin: 4, hair: 'fade', beard: 0, band: 0 } };
-  try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) { s = null; }
-  if (s && s.v === 2) G.migrate(s);
-  if (s && s.v !== 3) s = null; // older saves predate ceilings and height
-  const save = () => { try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY); } catch (e) { /* private mode: play on without saving */ } };
+  // Save slots live in this browser only, so each phone has its own careers. Slot 0 keeps the old key.
+  const SLOTS = 5, keyOf = (i) => (i ? `${KEY}.${i}` : KEY);
+  const read = (i) => {
+    let x = null;
+    try { x = JSON.parse(localStorage.getItem(keyOf(i))); } catch (e) { return null; }
+    if (x && x.v === 2) G.migrate(x);
+    return x && x.v === 3 ? x : null; // older saves predate ceilings and height
+  };
+  let slot = 0;
+  try { slot = +localStorage.getItem(KEY + '.slot') || 0; } catch (e) { /* no storage */ }
+  s = read(slot);
+  const save = () => { try { if (s) { localStorage.setItem(keyOf(slot), JSON.stringify(s)); localStorage.setItem(KEY + '.slot', slot); } } catch (e) { /* private mode: play on without saving */ } };
+  const drop = (i) => { try { localStorage.removeItem(keyOf(i)); } catch (e) { /* no storage */ } };
 
   // ---------- small pieces ----------
   const sign = (v) => (v > 0 ? '+' : '−') + Math.abs(v);
@@ -60,7 +69,9 @@
   function setup() {
     const sp = G.SPORTS[draft.sport], l = draft.look;
     if (!sp.pos.some((p) => p.id === draft.pos)) draft.pos = sp.pos[0].id;
+    const saved = [...Array(SLOTS).keys()].map((i) => [i, read(i)]).filter(([, x]) => x);
     return `<section class="step">
+      ${saved.length ? `<p class="meta">Saved careers on this device</p><ul class="choices">${saved.map(([i, x]) => `<li><button type="button" class="choice" data-a="load" data-i="${i}">${esc(x.name)} · ${esc(G.posOf(x).n)}${x.team ? ' · ' + esc(x.team) : ''}</button><p class="hint">${x.cur.t === 'end' ? 'Retired' : x.cur.t === 'draw' ? 'In the draw' : `Age ${x.age}`} · <button type="button" class="link" data-a="del" data-i="${i}">Delete</button></p></li>`).join('')}</ul>` : ''}
       <h2 class="headline">Your career, in headlines</h2>
       <p class="stand">Play the big moments yourself. Live with everything else: the coach, the money, the people at home.</p>
       <label class="field">Player name<input id="name" maxlength="18" autocomplete="off" placeholder="Tobi Adeyemi" value="${esc(draft.name)}"></label>
@@ -145,7 +156,7 @@
 
   function match(m, sp) {
     const head = `<p class="meta">${esc(m.kind)}${m.done ? ' · Full time' : ` · Moment ${m.i + 1} of ${m.moments.length}`}</p>
-      <div class="score"><span>${esc(last(s.team))}</span><b>${G.scoreAt(m)[0]}</b><b>${G.scoreAt(m)[1]}</b><span>${esc(last(m.opp))}</span></div>`;
+      <div class="score"><span>${esc(G.short(s.team))}</span><b>${G.scoreAt(m)[0]}</b><b>${G.scoreAt(m)[1]}</b><span>${esc(G.short(m.opp))}</span></div>`;
     if (m.done) return head + `<span class="grade" aria-label="Grade ${m.done.grade}">${m.done.grade}</span>
       <p class="res">${m.done.win ? 'A win.' : m.done.draw ? 'A draw.' : 'A defeat.'} You came through in ${m.hits} of ${m.moments.length} moments${m.mine ? ` and scored ${m.mine}` : ''}.</p>${deltas(m.done.d)}${btn('cont', 'Continue')}`;
     const mo = m.moments[m.i], opts = G.optsFor(s, mo), him = last(mo.vs[0]);
@@ -202,8 +213,8 @@
 
   function record() {
     return `<section class="step still"><h2 class="title">Career record</h2>
-      ${s.seasons.length ? `<div class="scroll"><table class="box"><tr><th>Age</th><th>Club</th><th>Season</th><th>Ovr</th></tr>${s.seasons.map((r) => `<tr><td>${r.age}</td><td>${esc(last(r.team))}${r.awards.length ? '<br>' + esc(r.awards.join(', ')) : ''}</td><td>${esc(r.line).replace(/ · /g, '<br>')}</td><td>${r.o}</td></tr>`).join('')}</table></div>` : `<p class="text">No seasons in the book yet.</p>`}
-      <p style="margin-top:var(--space-xl)">${installEvt ? `<button class="link" data-a="install">Install as an app</button> · ` : ''}<button class="link" data-a="fresh">Abandon this career</button></p>
+      ${s.seasons.length ? `<div class="scroll"><table class="box"><tr><th>Age</th><th>Club</th><th>Season</th><th>Ovr</th></tr>${s.seasons.map((r) => `<tr><td>${r.age}</td><td>${esc(G.short(r.team))}${r.awards.length ? '<br>' + esc(r.awards.join(', ')) : ''}</td><td>${esc(r.line).replace(/ · /g, '<br>')}</td><td>${r.o}</td></tr>`).join('')}</table></div>` : `<p class="text">No seasons in the book yet.</p>`}
+      <p style="margin-top:var(--space-xl)">${installEvt ? `<button class="link" data-a="install">Install as an app</button> · ` : ''}<button class="link" data-a="switch">Saved careers</button> · <button class="link" data-a="fresh">Abandon this career</button></p>
       <p class="hint" style="margin-top:var(--space-md)">${NOTE}</p>
     </section>`;
   }
@@ -243,8 +254,10 @@
   }
 
   // Back to the setup screen, filled in with this player so a new build is one tap away.
-  function toSetup() {
-    draft = { name: s.name, sport: s.sport, pos: s.pos, country: s.country, origin: s.origin, story: s.story, look: Object.assign({}, s.look) };
+  // keep: leave the career in its slot instead of throwing it away.
+  function toSetup(keep) {
+    draft = { name: s.name, sport: s.sport, pos: s.pos, country: s.country || 'NG', origin: s.origin, story: s.story, look: Object.assign({}, s.look) };
+    if (!keep) drop(slot);
     s = null; lastStep = ''; window.scrollTo(0, 0);
   }
 
@@ -255,7 +268,14 @@
     setup: () => { if (6 - s.cur.left.length === 0 && !s.cur.card || confirm('Go back to setup? This draw will be lost.')) toSetup(); },
     origin: (b) => { draft.origin = b.dataset.k; },
     look: (b) => { draft.look[b.dataset.k] = b.dataset.k === 'hair' ? b.dataset.v : +b.dataset.v; },
-    begin: () => { s = G.create(draft); tab = 'career'; window.scrollTo(0, 0); },
+    begin: () => {
+      const free = [...Array(SLOTS).keys()].find((i) => !read(i));
+      if (free === undefined) return alert(`All ${SLOTS} save slots are full. Delete a saved career first.`);
+      slot = free; s = G.create(draft); tab = 'career'; window.scrollTo(0, 0);
+    },
+    load: (b) => { slot = +b.dataset.i; s = read(slot); tab = 'career'; lastStep = ''; window.scrollTo(0, 0); },
+    del: (b) => { const i = +b.dataset.i; if (confirm(`Delete ${read(i).name}'s career? It cannot be brought back.`)) drop(i); },
+    switch: () => toSetup(true),
     spin: () => {
       G.spin(s);
       if (calm) return;

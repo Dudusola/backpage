@@ -51,6 +51,8 @@ for (let n = 0; n < N; n++) {
   const l = s.cur.l; assert(Number.isFinite(l.score)); assert(s.after, 'no after-career choice');
   ranks[l.rank] = (ranks[l.rank] || 0) + 1; ribbons[l.ribbon] = (ribbons[l.ribbon] || 0) + 1; seasons += l.n; titles += s.titles;
 }
+// every club has its own scoreboard name
+for (const sp of Object.values(G.SPORTS)) { const all = sp.teams.slice(1).flat(); assert.equal(new Set(all.map(G.short)).size, all.length, 'short team names clash'); }
 // an old save still loads
 const old = G.create({ sport: 'bb' }); old.v = 2; delete old.pos; G.migrate(old); assert(old.v === 3 && G.posOf(old).id === 'SF');
 console.log('ok', N, 'careers. avg seasons', (seasons / N).toFixed(1), 'avg titles', (titles / N).toFixed(2), 'clutch per match', (clutch / matches).toFixed(2));

@@ -15,7 +15,7 @@
     bb: {
       name: 'Basketball',
       stats: { sho: 'Shooting', drv: 'Finishing', pas: 'Playmaking', def: 'Defense', ath: 'Athleticism', cmp: 'Composure' },
-      teams: [null, ['Harbor City Kings', 'Northgate Comets'], ['Redwater Foxes', 'Lakeshore Herons'], ['Dustbowl Coyotes', 'Port Azure Gulls']],
+      teams: [null, ['Boston Celtics', 'Oklahoma City Thunder', 'Denver Nuggets', 'Cleveland Cavaliers', 'New York Knicks', 'Golden State Warriors', 'Los Angeles Lakers', 'Milwaukee Bucks', 'Minnesota Timberwolves', 'Houston Rockets'], ['Dallas Mavericks', 'Phoenix Suns', 'Miami Heat', 'Indiana Pacers', 'Orlando Magic', 'Los Angeles Clippers', 'Memphis Grizzlies', 'Sacramento Kings', 'Philadelphia 76ers', 'Atlanta Hawks'], ['Detroit Pistons', 'San Antonio Spurs', 'Charlotte Hornets', 'Washington Wizards', 'Portland Trail Blazers', 'Utah Jazz', 'Brooklyn Nets', 'Toronto Raptors', 'Chicago Bulls', 'New Orleans Pelicans']],
       body: { tall: 81, short: 75, mods: { tall: { drv: 3, def: 3, ath: -3, sho: -2 }, short: { ath: 3, pas: 2, drv: -2, def: -2 }, mid: {} } },
       mvp: 'MVP', star: 'All-Star', title: 'champions', final: 'The Finals', entry: 'Draft night', joined: 'Drafted by the {team}.', mid: 'went out in the play-offs',
       entryText: (t, n) => `With the ${ord(n)} pick, the ${t} take a chance on you. ${n <= 30 ? 'A four-year rookie deal and a locker by the door.' : 'A two-way contract and a lot to prove.'}`,
@@ -68,7 +68,7 @@
     soc: {
       name: 'Soccer',
       stats: { sho: 'Shooting', drv: 'Dribbling', pas: 'Passing', def: 'Defending', ath: 'Pace', cmp: 'Composure' },
-      teams: [null, ['Castellan CF', 'Northgate Athletic'], ['Redwater Rovers', 'Lakeshore United'], ['Dunmore Town', 'Port Azure FC']],
+      teams: [null, ['Real Madrid', 'Barcelona', 'Manchester City', 'Liverpool', 'Arsenal', 'Bayern Munich', 'Paris Saint-Germain', 'Inter Milan', 'Chelsea', 'Atlético Madrid'], ['Manchester United', 'Tottenham Hotspur', 'Juventus', 'AC Milan', 'Borussia Dortmund', 'Napoli', 'Bayer Leverkusen', 'Benfica', 'Porto', 'Ajax', 'Aston Villa', 'Newcastle United'], ['Everton', 'West Ham United', 'Sevilla', 'Real Betis', 'Lyon', 'Marseille', 'Celtic', 'Galatasaray', 'Sporting CP', 'PSV Eindhoven', 'Feyenoord', 'Villarreal']],
       body: { tall: 188, short: 174, mods: { tall: { def: 3, sho: 1, ath: -3 }, short: { ath: 3, drv: 3, def: -3 }, mid: {} } },
       mvp: 'Player of the Year', star: 'Team of the Season', title: 'champions', final: 'The Cup Final', entry: 'Signing day', joined: 'Signed by {team} from the academy.', mid: 'finished in the top half',
       entryText: (t, n) => `${t} sign you from the academy. A four-year deal, the number 27 shirt and a seat at the back of the bus.`,
@@ -287,6 +287,8 @@
     return out;
   }
 
+  const SHORT = { 'Real Madrid': 'Real Madrid', 'Manchester City': 'Man City', 'Manchester United': 'Man United', 'Atlético Madrid': 'Atlético', 'Paris Saint-Germain': 'PSG', 'Inter Milan': 'Inter', 'AC Milan': 'Milan', 'Bayern Munich': 'Bayern', 'Borussia Dortmund': 'Dortmund', 'Bayer Leverkusen': 'Leverkusen', 'Tottenham Hotspur': 'Spurs', 'Aston Villa': 'Villa', 'Newcastle United': 'Newcastle', 'West Ham United': 'West Ham', 'Real Betis': 'Betis', 'Sporting CP': 'Sporting', 'PSV Eindhoven': 'PSV', 'Portland Trail Blazers': 'Blazers' };
+  const short = (team) => { const t = team.replace(/^.*’s /, ''); return SHORT[t] || t.split(' ').pop(); };
   const salaryFor = (tier, o) => Math.round([0, 900, 500, 250][tier] * clamp(0.5 + (o - 60) / 25, 0.4, 2));
   function moveTeam(s, tier) {
     const opts = cfg(s).teams[tier].filter((t) => t !== s.team);
@@ -739,7 +741,7 @@
   function newMatch(s, kind) {
     const c = cfg(s), isFinal = kind === c.final;
     const oppTier = isFinal ? 1 : ri(1, 3);
-    const opp = kind === 'Rivalry game' ? `${s.names.rival}’s ${pick(c.teams[oppTier].filter((t) => t !== s.team)).split(' ').pop()}` : pick(c.teams[oppTier].filter((t) => t !== s.team));
+    const opp = kind === 'Rivalry game' ? `${s.names.rival}’s ${pick(c.teams[oppTier].filter((t) => t !== s.team))}` : pick(c.teams[oppTier].filter((t) => t !== s.team));
     const [us, them] = c.base(teamStr(s), [0, 82, 72, 62][oppTier] + (isFinal ? 4 : 0));
     const m = { kind, opp, us, them, bu: us, bt: them, tier: isFinal ? 0 : oppTier, i: 0, hits: 0, mine: 0, opt: null, res: null, done: null, isFinal, moments: [] };
     const n = ri(3, 5), att = posOf(s).att;
@@ -962,6 +964,6 @@
     return { score, rank, ribbon, worth: w, n };
   }
 
-  const G = { SPORTS, KEYS, ORIGINS, ORIG, COUNTRIES, home, BUY, buy, POOL, optsFor, scoreAt, posOf, rate, zoneAt, redraw, migrate, build, fmtH, ARC, EV, ACTS, FUNDS, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, invest, cashOut, legacy, ovr, worth, money, tx };
+  const G = { SPORTS, KEYS, ORIGINS, ORIG, COUNTRIES, home, BUY, buy, POOL, optsFor, scoreAt, posOf, rate, zoneAt, redraw, migrate, build, fmtH, ARC, EV, ACTS, FUNDS, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, invest, cashOut, legacy, ovr, worth, money, short, tx };
   if (typeof module !== 'undefined') module.exports = G; else root.G = G;
 })(this);
