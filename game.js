@@ -302,13 +302,13 @@
   const LABEL = { coach: 'Coach', mates: 'Teammates', morale: 'Morale', fame: 'Fame', health: 'Fitness', money: 'Money', bond: 'Partner', heat: 'Rivalry' };
 
   const ovr = (s) => Math.round(avg(KEYS.map((k) => s.st[k])));
-  const worth = (s) => s.money + s.inv.reduce((t, i) => t + i.amt, 0);
+  const worth = (s) => s.money + s.inv.reduce((t, i) => t + i.amt, 0) + Object.keys(s.stocks || {}).reduce((t, id) => t + holding(s, id), 0) + (s.homes || []).reduce((t, h) => t + h.val - h.loan, 0) + (s.cars || []).reduce((t, c) => t + c.val, 0);
   const cfg = (s) => SPORTS[s.sport];
   function tx(s, str) {
     const C = home(s), v = { team: s.team, name: s.name, partner: s.partner ? s.partner.name : 'your partner', country: C.n, adj: C.adj, food: C.food, city: C.city, cup: CUPS[C.r][s.sport === 'bb' ? 1 : 0] };
     return str.replace(/\{(\w+)\}/g, (_, k) => (k in v ? v[k] : s.names[k]));
   }
-  const say = (s, t) => { s.log.push({ a: s.age, t: tx(s, t) }); if (s.log.length > 80) s.log.shift(); };
+  const say = (s, t) => { s.log.push({ a: s.age, t: tx(s, t) }); if (s.log.length > 600) s.log.shift(); };
 
   // Apply stat changes; returns [label, amount] pairs for the outcome card.
   function ch(s, d) {
@@ -642,6 +642,7 @@
     s.story = s.origin === 'own' ? (story || '').trim().slice(0, 90) : '';
     ch(s, ORIG[s.origin].d0);
     s.money = Math.max(0, s.money);
+    assets(s);
     const C = home(s), kr = s.country === 'KR', w = s.name.split(' '), fam = w.length > 1 ? w[kr ? 0 : w.length - 1] : '';
     const full = (first) => (kr ? [fam, first] : [first, fam]).filter(Boolean).join(' ');
     s.log.push({ a: 0, t: `Born in ${C.city}, ${C.n}. Mother: ${full(her(s.country))}, ${pick(JOBS)}.${s.origin === 'single' ? ' Father: not around.' : s.origin === 'nepo' ? ' Father: a retired star, and nobody lets you forget it.' : ` Father: ${full(pick(NAMES[s.country][0]))}, ${pick(JOBS)}.`}` });
@@ -877,9 +878,11 @@
 
   // Saves from before positions: give them one and restart any match in progress.
   function migrate(s) {
-    if (s.v !== 2) return;
-    s.v = 3; s.pos = cfg(s).pos[s.sport === 'bb' ? 2 : 0].id;
-    if (s.cur.t === 'match') s.cur.m = newMatch(s, s.cur.m.kind);
+    if (s.v === 2) {
+      s.v = 3; s.pos = cfg(s).pos[s.sport === 'bb' ? 2 : 0].id;
+      if (s.cur.t === 'match') s.cur.m = newMatch(s, s.cur.m.kind);
+    }
+    if (s.v === 3) assets(s);
   }
 
   // ---------- end of season ----------
@@ -921,6 +924,7 @@
       }
       return true;
     });
+    yearOfAssets(s, notes);
 
     s.seasons.push({ age: s.age, team: s.team, line, awards, o });
     say(s, `Season over. ${finish}${awards.length ? ' Honours: ' + awards.join(', ') + '.' : ''}`);
@@ -963,31 +967,173 @@
     s.note = tx(s, t) + ' ' + ch(s, d).map(([l, v]) => `${l} ${v > 0 ? '+' : '−'}${Math.abs(v)}`).join(', ') + '.';
   }
 
-  const FUNDS = {
-    idx: { n: 'Index fund', d: 'Dull. Grows a few per cent a year.' },
-    prop: { n: 'Property', d: 'Steady, with the odd bad year.' },
-    vc: { n: 'Start-up stake', d: 'Usually worth nothing. Sometimes six times over.' },
-    bond: { n: 'Government bonds', d: 'Safe and slow. About three per cent.' },
-    crypto: { n: 'Crypto', d: 'Up a lot, down a lot. Mostly down.' },
-  };
-  function invest(s, kind) {
-    const amt = Math.floor(s.money / 4);
-    if (amt < 10) return;
-    s.money -= amt;
-    const have = s.inv.find((i) => i.kind === kind && i.n === FUNDS[kind].n && kind !== 'vc');
-    if (have) have.amt += amt; else s.inv.push({ n: FUNDS[kind].n, amt, kind });
+  // ---------- assets, BitLife style: a stock market, property listings and a car dealer ----------
+  // Share prices are in dollars; holdings and everything else are in $k like the rest of the game.
+  const STOCKS = [
+    // id, name, blurb, start price, yearly drift, volatility, dividend, penny (can be delisted)
+    ['CRTS', 'Courtside Apparel', 'Trainers and team kits. Pays a small dividend.', 48, 0.06, 0.18, 0.02],
+    ['KICK', 'Kickoff Media', 'Streams live sport. Loses money, grows fast.', 22, 0.07, 0.32, 0],
+    ['PXLA', 'Pixel Arcade', 'Video games. Lives and dies by one big release.', 75, 0.07, 0.3, 0],
+    ['HRBR', 'Harbor Bank', 'A big, boring bank. Good dividend.', 36, 0.04, 0.15, 0.05],
+    ['NWND', 'Northwind Energy', 'Wind farms and oil rigs.', 54, 0.04, 0.22, 0.04],
+    ['LEAF', 'GreenLeaf Foods', 'Supermarkets. People always eat.', 30, 0.03, 0.1, 0.03],
+    ['MOON', 'Moonshot Biotech', 'Penny stock. One drug trial from glory or nothing.', 0.8, 0, 0.9, 0, 1],
+    ['RKTS', 'Rocket Scooters', 'Penny stock. Electric scooters, mostly found in rivers.', 1.4, -0.02, 0.8, 0, 1],
+    ['IDX', 'World index fund', 'A slice of everything. Dull on purpose.', 100, 0.07, 0.12, 0.01],
+    ['BOND', 'Government bonds', 'Three per cent a year. Never moves.', 100, 0.03, 0, 0],
+    ['BTCN', 'Bitcone', 'The big crypto coin. Wild.', 400, 0.1, 0.7, 0],
+    ['HYPE', 'Hypecoin', 'A crypto coin with a dog on it.', 0.05, -0.1, 1.2, 0, 1],
+  ].map(([id, n, d, p, mu, vol, div, penny]) => ({ id, n, d, p, mu, vol, div, penny: !!penny, coin: ['BTCN', 'HYPE'].includes(id) }));
+  const STK = Object.fromEntries(STOCKS.map((x) => [x.id, x]));
+  const HOMES = [['Studio flat', 120, 0.07], ['Two-bed apartment', 300, 0.065], ['Townhouse', 650, 0.06], ['Family house with a garden', 1200, 0.055], ['Penthouse', 2500, 0.05], ['Villa with a pool', 4500, 0.045], ['Mansion', 9000, 0.04]];
+  const CITIES = ['Miami', 'London', 'Dubai', 'Lisbon', 'Barcelona', 'Los Angeles', 'Milan', 'Madrid', 'New York'];
+  const CARS = [['Hatchback', 20], ['German saloon', 90], ['Electric SUV', 140], ['Vintage convertible', 220, 1], ['Supercar', 600]];
+
+  function listings(s) {
+    const cap = Math.max(300, s.money * 4), fit = HOMES.filter((h) => h[1] <= cap);
+    s.list = {
+      homes: [0, 1, 2].map(() => {
+        const [n, base, y] = pick(fit), cond = ri(25, 100), haunted = R() < 0.07;
+        return { n, y, city: R() < 0.4 ? home(s).city : pick(CITIES), age: ri(1, 90), cond, haunted, val: Math.round(base * (0.75 + R() * 0.5) * (0.6 + cond / 250) * (haunted ? 0.65 : 1)) };
+      }),
+      cars: shuffle(CARS.filter((c) => c[1] <= cap)).slice(0, 3).map(([n, base, vint]) => { const used = R() < 0.5; return { n, vint: !!vint, cond: used ? ri(40, 85) : 100, val: Math.round(base * (used ? 0.6 : 1)) }; }),
+    };
+  }
+  // Older saves have none of this yet.
+  function assets(s) {
+    if (!s.mkt) Object.assign(s, { mkt: Object.fromEntries(STOCKS.map((x) => [x.id, x.p])), chg: {}, stocks: {}, homes: [], cars: [] });
+    if (!s.list) listings(s);
+  }
+  const stake = (s) => Math.max(5, Math.round(s.money / 10 / 5) * 5); // a tenth of your cash, rounded
+  const holding = (s, id) => (s.stocks[id] ? (s.stocks[id].sh * s.mkt[id]) / 1000 : 0);
+  function buyStock(s, id) {
+    const amt = stake(s);
+    if (s.money < amt || !STK[id]) return;
+    const h = s.stocks[id] || (s.stocks[id] = { sh: 0, paid: 0 });
+    h.sh += (amt * 1000) / s.mkt[id]; h.paid += amt; s.money -= amt;
+    s.note = `Bought ${money(amt)} of ${STK[id].n}.`;
+  }
+  function sellStock(s, id) {
+    const h = s.stocks[id];
+    if (!h) return;
+    const v = Math.round(holding(s, id)), gain = v - h.paid;
+    s.money += v; delete s.stocks[id];
+    s.note = `Sold ${STK[id].n} for ${money(v)}. ${gain >= 0 ? 'Profit' : 'Loss'}: ${money(Math.abs(gain))}.`;
+    say(s, s.note);
+  }
+  function buyHome(s, i, mortgage) {
+    const l = s.list.homes[i];
+    if (!l) return;
+    const down = mortgage ? Math.round(l.val * 0.2) : l.val;
+    if (s.money < down) return;
+    const debt = l.val - down;
+    s.money -= down; s.list.homes.splice(i, 1);
+    s.homes.push(Object.assign(l, { paid: l.val, loan: debt, pay: Math.round(debt * 0.11), rent: 0 }));
+    ch(s, { morale: 6 });
+    s.note = `The keys are yours.${l.haunted ? ' The agent did not stay for coffee.' : ''}`;
+    say(s, `Bought a ${l.n.toLowerCase()} in ${l.city} for ${money(l.val)}${debt ? ', with a mortgage' : ', cash'}.`);
+  }
+  const renoCost = (h) => Math.round((h.val * (100 - h.cond)) / 250);
+  function homeDo(s, i, what) {
+    const h = s.homes[i];
+    if (!h) return;
+    if (what === 'reno') {
+      const c = renoCost(h);
+      if (s.money < c || h.cond >= 95) return;
+      s.money -= c; h.paid += c; h.val = Math.round(h.val * (1 + (100 - h.cond) / 300)); h.cond = 100;
+      s.note = `The builders finish ${pick(['on time', 'two months late', 'and leave a mess'])}. Condition 100%.`;
+    } else if (what === 'ghost') {
+      if (s.money < 20 || !h.haunted) return;
+      s.money -= 20; h.paid += 20;
+      if (R() < 0.6) { h.haunted = false; h.val = Math.round(h.val * 1.35); s.note = 'The priest says a few words and the house goes quiet. It is worth more already.'; }
+      else s.note = 'The priest leaves in a hurry. Whatever lives there is staying.';
+    } else if (what === 'rent') {
+      h.rent = h.rent ? 0 : 1;
+      s.note = h.rent ? `Tenants move into your ${h.n.toLowerCase()} in ${h.city}.` : 'You give the tenants notice.';
+    } else if (what === 'sell') {
+      const gain = h.val - h.paid;
+      s.money += h.val - h.loan; s.homes.splice(i, 1);
+      s.f.propGain = (s.f.propGain || 0) + gain;
+      s.note = `Sold for ${money(h.val)}${h.loan ? `, ${money(h.loan)} of it to the bank` : ''}. ${gain >= 0 ? 'Profit' : 'Loss'}: ${money(Math.abs(gain))}.`;
+      say(s, `Sold the ${h.n.toLowerCase()} in ${h.city}. ${gain >= 0 ? 'Profit' : 'Loss'}: ${money(Math.abs(gain))}.`);
+    }
+  }
+  function buyCar(s, i) {
+    const c = s.list.cars[i];
+    if (!c || s.money < c.val) return;
+    s.money -= c.val; s.list.cars.splice(i, 1);
+    s.cars.push(Object.assign(c, { paid: c.val }));
+    ch(s, { morale: 4, fame: c.val >= 300 ? 3 : 1 });
+    s.note = `The ${c.n.toLowerCase()} is yours.`;
+    say(s, `Bought a ${c.cond < 100 ? 'used ' : 'new '}${c.n.toLowerCase()}.`);
+  }
+  const svcCost = (c) => Math.max(1, Math.round(c.val * 0.06));
+  function carDo(s, i, what) {
+    const c = s.cars[i];
+    if (!c) return;
+    if (what === 'service') {
+      const k = svcCost(c);
+      if (s.money < k || c.cond >= 95) return;
+      s.money -= k; c.cond = Math.min(100, c.cond + 25); s.note = 'Serviced. It purrs.';
+    } else { s.money += c.val; s.cars.splice(i, 1); s.note = `Sold the ${c.n.toLowerCase()} for ${money(c.val)}.`; }
+  }
+  // One year passes for everything you own.
+  function yearOfAssets(s, notes) {
+    assets(s);
+    const crash = R() < 0.08, boom = !crash && R() < 0.1;
+    if (crash) { notes.push('The markets crashed this year.'); say(s, 'The markets crashed.'); } else if (boom) notes.push('A boom year on the markets.');
+    let div = 0;
+    for (const x of STOCKS) {
+      const old = s.mkt[x.id];
+      let r = x.mu + x.vol * 2 * (R() + R() + R() - 1.5);
+      if (x.vol) r += crash ? (x.coin ? -0.5 : -0.3) : boom ? 0.15 : 0;
+      let p = Math.max(old * 0.05, old * (1 + r));
+      if (x.penny && R() < 0.1) {
+        if (s.stocks[x.id]) { notes.push(`${x.n} went bust. Your ${money(s.stocks[x.id].paid)} is gone.`); say(s, `${x.n} went bust and took your money with it.`); delete s.stocks[x.id]; }
+        p = x.p; s.chg[x.id] = null; s.mkt[x.id] = p; continue; // a new outfit lists under the old name
+      }
+      if (s.stocks[x.id]) div += holding(s, x.id) * x.div;
+      s.chg[x.id] = p / old - 1; s.mkt[x.id] = p;
+    }
+    if (div >= 1) { s.money += Math.round(div); notes.push(`Dividends ${money(div)}.`); }
+    let rent = 0, costs = 0;
+    for (const h of s.homes) {
+      h.val = Math.round(h.val * (1.02 + R() * 0.05 + (h.cond - 60) / 1500 - (crash ? 0.15 : 0)));
+      h.cond = Math.max(0, h.cond - ri(2, 6) - (h.rent ? 2 : 0)); h.age++;
+      costs += Math.round(h.val * 0.012);
+      if (h.loan > 0) { const p = Math.min(h.pay, Math.ceil(h.loan / 0.75)); costs += p; h.loan = Math.max(0, h.loan - Math.round(p * 0.75)); }
+      if (h.rent) {
+        const r = R();
+        if (r < 0.12) notes.push(`The tenants in ${h.city} stopped paying. You get them out eventually.`);
+        else { if (r < 0.2) { h.cond = Math.max(0, h.cond - 15); notes.push(`The tenants in ${h.city} wrecked the kitchen.`); } rent += Math.round(h.val * h.y * (0.6 + h.cond / 250)); }
+      }
+      if (R() < 0.06) { h.cond = Math.max(0, h.cond - 20); notes.push(`${pick(['Termites', 'A burst pipe', 'Damp'])} in your ${h.n.toLowerCase()} in ${h.city}.`); }
+      if (h.haunted && R() < 0.3) { notes.push(`The neighbours in ${h.city} complain about screaming from your empty ${h.n.toLowerCase()}.`); ch(s, { morale: -3 }); }
+    }
+    if (s.homes.length) { s.money += rent - costs; notes.push(`Property: rent ${money(rent)}, mortgage and upkeep ${money(costs)}.`); }
+    // the bank takes a mortgaged home if you cannot pay
+    while (s.money < 0 && s.homes.some((h) => h.loan > 0)) {
+      const i = s.homes.findIndex((h) => h.loan > 0), h = s.homes[i];
+      s.money += Math.round(h.val * 0.8) - h.loan; s.homes.splice(i, 1);
+      notes.push(`The bank repossessed your ${h.n.toLowerCase()} in ${h.city}.`); say(s, `The bank took the ${h.n.toLowerCase()} in ${h.city}.`); ch(s, { morale: -10 });
+    }
+    s.cars = s.cars.filter((c) => {
+      c.val = Math.round(c.val * (c.vint && c.cond > 60 ? 1.04 : 0.85)); c.cond -= ri(5, 12);
+      if (R() < 0.05) { c.cond -= 30; notes.push(`You put the ${c.n.toLowerCase()} into a wall. Nobody hurt.`); }
+      if (c.cond <= 0) { notes.push(`The ${c.n.toLowerCase()} is beyond saving. Scrapped.`); return false; }
+      return true;
+    });
+    listings(s);
   }
   const BUY = {
-    car: { n: 'A fast car', cost: 150, kind: 'car', d: 'Loses value every year. Feels incredible.', fx: { fame: 3, morale: 6 } },
-    house: { n: 'A house of your own', cost: 600, kind: 'prop', d: 'Somewhere that is yours. Usually goes up.', fx: { morale: 10 } },
     parents: { n: 'A house for your parents', cost: 300, d: 'Not an investment. Worth it anyway.', fx: { morale: 18 } },
   };
   function buy(s, id) {
     const b = BUY[id];
     if (s.money < b.cost) return;
     s.money -= b.cost;
-    if (b.kind) s.inv.push({ n: b.n.replace(/^A /, 'Your ').replace('Your house of your own', 'Your house'), amt: b.cost, kind: b.kind });
     ch(s, b.fx);
+    say(s, 'Bought your parents a house.');
   }
   function cashOut(s, i) {
     const x = s.inv[i];
@@ -1001,10 +1147,10 @@
     const n = s.seasons.length, w = worth(s);
     const score = Math.round(s.titles * 10 + s.mvps * 8 + s.stars * 2 + n * 0.5 + s.fame * 0.15 + Math.max(0, s.peak - 75) + Math.min(6, w / 5000) + (s.f.gaveBack ? 5 : 0));
     const rank = score >= 125 ? 'Immortal' : score >= 85 ? 'Hall of Famer' : score >= 55 ? 'Fan favourite' : score >= 32 ? 'Solid professional' : 'What might have been';
-    const ribbon = s.f.doped && s.seen.test !== undefined ? 'The Asterisk' : w > 60000 ? 'The Mogul' : s.teams === 1 && n >= 10 ? 'One-Club Legend' : s.teams >= 6 ? 'The Journeyman' : (s.f.tabloid || 0) >= 2 ? 'Tabloid Regular' : s.f.gaveBack ? 'Hometown Hero' : s.f.kids && s.partner ? 'Family First' : (s.f.sides || 0) >= 2 ? 'Multi-Hyphenate' : 'Quiet Pro';
+    const ribbon = s.f.doped && s.seen.test !== undefined ? 'The Asterisk' : w > 60000 ? 'The Mogul' : (s.homes || []).length >= 3 || (s.f.propGain || 0) > 3000 ? 'The Landlord' : s.teams === 1 && n >= 10 ? 'One-Club Legend' : s.teams >= 6 ? 'The Journeyman' : (s.f.tabloid || 0) >= 2 ? 'Tabloid Regular' : s.f.gaveBack ? 'Hometown Hero' : s.f.kids && s.partner ? 'Family First' : (s.f.sides || 0) >= 2 ? 'Multi-Hyphenate' : 'Quiet Pro';
     return { score, rank, ribbon, worth: w, n };
   }
 
-  const G = { SPORTS, KEYS, ORIGINS, ORIG, COUNTRIES, home, BUY, buy, POOL, optsFor, scoreAt, posOf, rate, zoneAt, redraw, migrate, build, fmtH, ARC, EV, ACTS, FUNDS, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, invest, cashOut, legacy, ovr, worth, money, short, randomLife, tx };
+  const G = { SPORTS, KEYS, ORIGINS, ORIG, COUNTRIES, home, BUY, buy, POOL, optsFor, scoreAt, posOf, rate, zoneAt, redraw, migrate, build, fmtH, ARC, EV, ACTS, STOCKS, holding, stake, buyStock, sellStock, buyHome, homeDo, renoCost, buyCar, carDo, svcCost, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, cashOut, legacy, ovr, worth, money, short, randomLife, tx };
   if (typeof module !== 'undefined') module.exports = G; else root.G = G;
 })(this);

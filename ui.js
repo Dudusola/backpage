@@ -13,7 +13,7 @@
   const read = (i) => {
     let x = null;
     try { x = JSON.parse(localStorage.getItem(keyOf(i))); } catch (e) { return null; }
-    if (x && x.v === 2) G.migrate(x);
+    if (x) G.migrate(x);
     return x && x.v === 3 ? x : null; // older saves predate ceilings and height
   };
   let slot = 0;
@@ -192,8 +192,9 @@
     const key = s.cur.t + s.si + s.age + (s.cur.out ? 'o' : '') + (s.cur.m ? s.cur.m.i + '' + (s.cur.m.opt !== null) + !!s.cur.m.res + !!s.cur.m.done : '');
     const still = key === lastStep; lastStep = key;
     return `<section class="step ${still ? 'still' : ''}">${stepCard()}</section>` + (s.cur.t === 'match' || !ages.length ? '' :
-      `<h2 class="sub">The story so far</h2><div class="log">${ages.map((a) => `<h3>Age ${a}</h3><ul>${s.log.filter((l) => l.a === a).reverse().map((l) => `<li>${esc(l.t)}</li>`).join('')}</ul>`).join('')}</div>`);
+      `<h2 class="sub">The story so far</h2>${lifeLog(ages)}<p><button class="link" data-a="tab" data-k="record">Read your whole life</button></p>`);
   }
+  const lifeLog = (ages) => `<div class="log">${ages.map((a) => `<h3>Age ${a}</h3><ul>${s.log.filter((l) => l.a === a).reverse().map((l) => `<li>${esc(l.t)}</li>`).join('')}</ul>`).join('')}</div>`;
 
   function life() {
     const sp = G.SPORTS[s.sport];
@@ -210,23 +211,47 @@
     </section>`;
   }
 
+  // Assets, laid out like BitLife's: what you own first, then what is for sale.
+  const px = (p) => '$' + (p >= 100 ? Math.round(p) : p >= 1 ? p.toFixed(2) : p.toFixed(3));
+  const pct = (v) => (v === undefined ? '' : v === null ? 'relisted' : `<span class="${v < 0 ? 'dn' : 'up'}">${v < 0 ? '▼' : '▲'} ${Math.abs(Math.round(v * 100))}%</span>`);
+  const row = (name, detail, acts) => `<li><div><b>${name}</b><span class="hint">${detail}</span></div><span class="acts">${acts}</span></li>`;
+  const act2 = (a, label, attrs = '') => `<button class="choice small" data-a="${a}" ${attrs}>${label}</button>`;
   function moneyTab() {
-    const q = Math.floor(s.money / 4);
+    const st = G.stake(s), cond = (c) => `condition ${Math.max(0, Math.round(c))}%`;
     return `<section class="step still"><p class="meta">Net worth</p><h2 class="headline num">${G.money(G.worth(s))}</h2>
       <table class="box"><tr><th>Cash</th><td>${G.money(s.money)}</td></tr><tr><th>Salary</th><td>${G.money(s.salary)} a year, ${Math.max(0, s.contract)} ${s.contract === 1 ? 'year' : 'years'} left</td></tr></table>
-      <h2 class="sub">Holdings</h2>
-      ${s.inv.length ? `<ul class="rows">${s.inv.map((x, i) => `<li><div><b>${esc(x.n)}</b><span class="num">${G.money(x.amt)}</span></div>${x.kind === 'resto' ? '<span class="hint">Family. It stays.</span>' : `<button class="choice small" data-a="cash" data-i="${i}">Cash out</button>`}</li>`).join('')}</ul>` : `<p class="hint">Nothing yet. Money left as cash earns nothing.</p>`}
       ${s.note ? `<p class="text">${esc(s.note)}</p>` : ''}
-      <h2 class="sub">Invest a quarter of your cash</h2>
-      <ul class="rows">${Object.entries(G.FUNDS).map(([k, f]) => `<li><div><b>${f.n}</b><span class="hint">${f.d}</span></div><button class="choice small" data-a="invest" data-k="${k}" ${q < 10 ? 'disabled' : ''}>Put in ${G.money(q)}</button></li>`).join('')}</ul>
-      <h2 class="sub">Buy</h2>
-      <ul class="rows">${Object.entries(G.BUY).map(([k, b]) => `<li><div><b>${b.n}</b><span class="hint">${b.d}</span></div><button class="choice small" data-a="buy" data-k="${k}" ${s.money < b.cost ? 'disabled' : ''}>${G.money(b.cost)}</button></li>`).join('')}</ul>
+      <h2 class="sub">Property</h2>
+      ${s.homes.length ? `<ul class="rows">${s.homes.map((h, i) => row(`${esc(h.n)}, ${esc(h.city)}`,
+        `Worth ${G.money(h.val)} · ${cond(h.cond)}${h.loan ? ` · owes ${G.money(h.loan)}` : ''}${h.rent ? ' · rented out' : ''}${h.haunted ? ' · haunted' : ''}`,
+        (h.cond < 95 ? act2('home', `Renovate ${G.money(G.renoCost(h))}`, `data-i="${i}" data-k="reno" ${s.money < G.renoCost(h) ? 'disabled' : ''}`) : '') +
+        (h.haunted ? act2('home', 'Exorcise $20k', `data-i="${i}" data-k="ghost" ${s.money < 20 ? 'disabled' : ''}`) : '') +
+        act2('home', h.rent ? 'Evict' : 'Rent out', `data-i="${i}" data-k="rent"`) + act2('home', 'Sell', `data-i="${i}" data-k="sell"`))).join('')}</ul>` : ''}
+      <p class="meta">For sale</p>
+      <ul class="rows">${s.list.homes.map((h, i) => row(`${esc(h.n)}, ${esc(h.city)} · ${G.money(h.val)}`,
+        `${h.age} years old · ${cond(h.cond)}${h.haunted ? ' · the agent mentions noises at night' : ''}`,
+        act2('buyhome', 'Cash', `data-i="${i}" ${s.money < h.val ? 'disabled' : ''}`) + act2('buyhome', `Mortgage, ${G.money(Math.round(h.val * 0.2))} down`, `data-i="${i}" data-k="m" ${s.money < Math.round(h.val * 0.2) ? 'disabled' : ''}`))).join('')}</ul>
+      <p class="hint">Homes need upkeep and lose condition every year. Renting them out pays, until the tenants stop paying. Miss a mortgage payment and the bank takes the house.</p>
+      <h2 class="sub">Stock market</h2>
+      <p class="hint">Each buy is a tenth of your cash: ${G.money(st)}. Prices move once a season.</p>
+      <ul class="rows">${G.STOCKS.map((x) => { const h = s.stocks[x.id], v = G.holding(s, x.id);
+        return row(`${esc(x.n)} · ${px(s.mkt[x.id])} ${pct(s.chg[x.id])}`, h ? `You own ${G.money(v)} · ${pct(v / h.paid - 1)} on what you paid` : esc(x.d),
+          act2('stock', 'Buy', `data-k="${x.id}" ${s.money < st ? 'disabled' : ''}`) + (h ? act2('sell', 'Sell', `data-k="${x.id}"`) : '')); }).join('')}</ul>
+      <h2 class="sub">Cars</h2>
+      ${s.cars.length ? `<ul class="rows">${s.cars.map((c, i) => row(esc(c.n), `Worth ${G.money(c.val)} · ${cond(c.cond)}`,
+        (c.cond < 95 ? act2('car', `Service ${G.money(G.svcCost(c))}`, `data-i="${i}" data-k="service" ${s.money < G.svcCost(c) ? 'disabled' : ''}`) : '') + act2('car', 'Sell', `data-i="${i}" data-k="sell"`))).join('')}</ul>` : ''}
+      <p class="meta">At the dealer</p>
+      <ul class="rows">${s.list.cars.map((c, i) => row(`${c.cond < 100 ? 'Used' : 'New'} ${esc(c.n.toLowerCase())} · ${G.money(c.val)}`, c.vint ? 'Holds its value if you look after it.' : c.cond < 100 ? cond(c.cond) : 'Loses value the moment you drive off.', act2('buycar', 'Buy', `data-i="${i}" ${s.money < c.val ? 'disabled' : ''}`))).join('')}</ul>
+      ${s.inv.length ? `<h2 class="sub">Businesses and deals</h2><ul class="rows">${s.inv.map((x, i) => row(esc(x.n), G.money(x.amt), x.kind === 'resto' ? '<span class="hint">Family. It stays.</span>' : act2('cash', 'Cash out', `data-i="${i}"`))).join('')}</ul>` : ''}
+      <h2 class="sub">Family</h2>
+      <ul class="rows">${Object.entries(G.BUY).map(([k, b]) => row(b.n, b.d, act2('buy', G.money(b.cost), `data-k="${k}" ${s.money < b.cost ? 'disabled' : ''}`))).join('')}</ul>
     </section>`;
   }
 
   function record() {
     return `<section class="step still"><h2 class="title">Career record</h2>
       ${s.seasons.length ? `<div class="scroll"><table class="box"><tr><th>Age</th><th>Club</th><th>Season</th><th>Ovr</th></tr>${s.seasons.map((r) => `<tr><td>${r.age}</td><td>${esc(G.short(r.team))}${r.awards.length ? '<br>' + esc(r.awards.join(', ')) : ''}</td><td>${esc(r.line).replace(/ · /g, '<br>')}</td><td>${r.o}</td></tr>`).join('')}</table></div>` : `<p class="text">No seasons in the book yet.</p>`}
+      <h2 class="sub">Your life, year by year</h2>${lifeLog([...new Set(s.log.map((l) => l.a))].reverse())}
       <p style="margin-top:var(--space-xl)">${installEvt ? `<button class="link" data-a="install">Install as an app</button> · ` : ''}<button class="link" data-a="switch">Saved careers</button> · <button class="link" data-a="fresh">Abandon this career</button></p>
       <p class="hint" style="margin-top:var(--space-md)">${NOTE}</p>
     </section>`;
@@ -307,8 +332,13 @@
     next: () => G.nextMoment(s),
     tab: (b) => { tab = b.dataset.k; window.scrollTo(0, 0); },
     act: (b) => G.act(s, b.dataset.k),
-    invest: (b) => { G.invest(s, b.dataset.k); s.note = ''; },
     buy: (b) => { G.buy(s, b.dataset.k); s.note = `Bought: ${G.BUY[b.dataset.k].n.toLowerCase()}.`; },
+    stock: (b) => G.buyStock(s, b.dataset.k),
+    sell: (b) => G.sellStock(s, b.dataset.k),
+    buyhome: (b) => G.buyHome(s, +b.dataset.i, b.dataset.k === 'm'),
+    home: (b) => { if (b.dataset.k !== 'sell' || confirm('Sell this home?')) G.homeDo(s, +b.dataset.i, b.dataset.k); },
+    buycar: (b) => G.buyCar(s, +b.dataset.i),
+    car: (b) => G.carDo(s, +b.dataset.i, b.dataset.k),
     cash: (b) => G.cashOut(s, +b.dataset.i),
     fresh: () => { if (s.cur.t === 'end' || confirm('Abandon this career? It cannot be brought back.')) toSetup(); },
     install: () => { installEvt.prompt(); installEvt = null; },

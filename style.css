@@ -134,6 +134,11 @@ main { padding-top: var(--space-lg); padding-bottom: calc(var(--tabs-h) + var(--
 .rows li { display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); padding-block: var(--space-xs); border-bottom: var(--rule); }
 .rows div { min-width: 0; }
 .rows b { display: block; font-weight: 600; }
+.rows li:has(.acts) { flex-wrap: wrap; }
+.rows li:has(.acts) > div { flex: 1 1 13rem; }
+.rows .acts { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+.rows .up, .rows .dn { font: 500 var(--text-sm) var(--font-mono); white-space: nowrap; }
+.rows .dn { color: var(--color-accent); }
 .notes li { padding-block: var(--space-2xs); font-size: var(--text-sm); }
 .log { margin-top: var(--space-sm); }
 .log h3 { font: 500 var(--text-xs) var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-accent); margin-top: var(--space-md); }

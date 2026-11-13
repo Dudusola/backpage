@@ -38,11 +38,14 @@ for (let n = 0; n < N; n++) {
       }
       grades[c.m.done.grade] = (grades[c.m.done.grade] || 0) + 1;
       assert(Number.isFinite(c.m.us) && Number.isFinite(c.m.them));
-    } else if (c.t === 'report') { assert(!/undefined|NaN/.test(c.r.head + c.r.stand + c.r.line), c.r.stand); if (pick(2)) {
+    } else if (c.t === 'report') { assert(!/undefined|NaN/.test(c.r.head + c.r.stand + c.r.line + c.r.notes.join()), c.r.notes.join()); if (pick(2)) {
         s.days = 3;
         for (let i = 0; i < 3; i++) { const ids = Object.keys(G.ACTS).filter((id) => G.ACTS[id].need(s)); G.act(s, ids[pick(ids.length)]); assert(!/[{}]|undefined/.test(s.note), s.note); }
-        G.invest(s, Object.keys(G.FUNDS)[pick(Object.keys(G.FUNDS).length)]); G.buy(s, Object.keys(G.BUY)[pick(3)]);
-      } }
+        const id = G.STOCKS[pick(G.STOCKS.length)].id; G.buyStock(s, id); if (pick(3) === 0) G.sellStock(s, id);
+        G.buyHome(s, pick(3), pick(2) === 0); if (s.homes.length) G.homeDo(s, pick(s.homes.length), ['reno', 'rent', 'ghost', 'sell'][pick(4)]);
+        G.buyCar(s, pick(3)); if (s.cars.length) G.carDo(s, 0, pick(2) ? 'service' : 'sell');
+        G.buy(s, 'parents'); assert(!/undefined|NaN/.test(s.note), s.note);
+        assert(Number.isFinite(G.worth(s)) && Object.values(s.mkt).every((p) => p > 0), 'assets');      } }
     if (c.t !== 'match' || c.m.done) G.advance(s);
     for (const k of G.KEYS) assert(s.st[k] >= 30 && s.st[k] <= 99, k);
     for (const k of ['coach', 'mates', 'morale', 'fame', 'health', 'heat', 'money']) assert(Number.isFinite(s[k]), k);
