@@ -7,7 +7,7 @@
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   let s = null, tab = 'career', lastStep = '', installEvt = null, rolling = false;
-  let draft = { name: '', sport: 'bb', pos: 'PG', country: 'NG', origin: 'single', story: '', look: { skin: 4, hair: 'fade', beard: 0, band: 0 } };
+  let draft = G.randomLife(), custom = false;
   // Save slots live in this browser only, so each phone has its own careers. Slot 0 keeps the old key.
   const SLOTS = 5, keyOf = (i) => (i ? `${KEY}.${i}` : KEY);
   const read = (i) => {
@@ -70,11 +70,23 @@
     const sp = G.SPORTS[draft.sport], l = draft.look;
     if (!sp.pos.some((p) => p.id === draft.pos)) draft.pos = sp.pos[0].id;
     const saved = [...Array(SLOTS).keys()].map((i) => [i, read(i)]).filter(([, x]) => x);
-    return `<section class="step">
-      ${saved.length ? `<p class="meta">Saved careers on this device</p><ul class="choices">${saved.map(([i, x]) => `<li><button type="button" class="choice" data-a="load" data-i="${i}">${esc(x.name)} · ${esc(G.posOf(x).n)}${x.team ? ' · ' + esc(x.team) : ''}</button><p class="hint">${x.cur.t === 'end' ? 'Retired' : x.cur.t === 'draw' ? 'In the draw' : `Age ${x.age}`} · <button type="button" class="link" data-a="del" data-i="${i}">Delete</button></p></li>`).join('')}</ul>` : ''}
-      <h2 class="headline">Your career, in headlines</h2>
-      <p class="stand">Play the big moments yourself. Live with everything else: the coach, the money, the people at home.</p>
-      <label class="field">Player name<input id="name" maxlength="18" autocomplete="off" placeholder="Tobi Adeyemi" value="${esc(draft.name)}"></label>
+    const top = `${saved.length ? `<p class="meta">Saved careers on this device</p><ul class="choices">${saved.map(([i, x]) => `<li><button type="button" class="choice" data-a="load" data-i="${i}">${esc(x.name)} · ${esc(G.posOf(x).n)}${x.team ? ' · ' + esc(x.team) : ''}</button><p class="hint">${x.cur.t === 'end' ? 'Retired' : x.cur.t === 'draw' ? 'In the draw' : `Age ${x.age}`} · <button type="button" class="link" data-a="del" data-i="${i}">Delete</button></p></li>`).join('')}</ul>` : ''}
+      <h2 class="headline">${custom ? 'Build a life' : 'A new life'}</h2>
+      <p class="stand">Play the big moments yourself. Live with everything else: the coach, the money, the people at home.</p>`;
+    if (!custom) {
+      const C = G.home(draft), o = G.ORIGINS.find((x) => x.id === draft.origin), p = sp.pos.find((x) => x.id === draft.pos);
+      return `<section class="step">${top}
+        <figure class="photo">${portrait(l, 1, 18)}<figcaption>${esc(C.adj)} ${esc(p.n.toLowerCase())}, 18</figcaption></figure>
+        <h2 class="sub">${esc(draft.name)}</h2>
+        <p class="text">Born in ${esc(C.city)}, ${esc(C.n)}. ${esc(sp.name)}, ${esc(p.n.toLowerCase())}. ${esc(o.n)}.</p>
+        <p class="hint">${esc(o.d)}</p>
+        ${btn('begin', 'Live this life')}
+        <div class="seg" style="margin-top:var(--space-md)">${choice('roll', 0, 'Roll again')}${choice('custom', 0, 'Build your own')}</div>
+        <p class="hint" style="margin-top:var(--space-md)">${NOTE}</p>
+      </section>`;
+    }
+    return `<section class="step">${top}
+      <label class="field">Player name<input id="name" maxlength="18" autocomplete="off" placeholder="Your name" value="${esc(draft.name)}"></label>
       <fieldset><legend class="field">Sport</legend><div class="seg">
         ${Object.entries(G.SPORTS).map(([k, v]) => `<button type="button" class="choice" data-a="sport" data-k="${k}" aria-pressed="${draft.sport === k}">${v.name}</button>`).join('')}
       </div></fieldset>
@@ -85,7 +97,7 @@
       <fieldset><legend class="field">Where you come from</legend><ul class="choices">
         ${G.ORIGINS.map((o) => `<li><button type="button" class="choice" data-a="origin" data-k="${o.id}" aria-pressed="${draft.origin === o.id}">${o.n}</button><p class="hint">${o.d}</p></li>`).join('')}
       </ul></fieldset>
-      ${draft.origin === 'own' ? `<label class="field">Your story, in one line<input id="story" maxlength="90" autocomplete="off" placeholder="Sold oranges at the stadium gate. Now I play inside it." value="${esc(draft.story)}"></label>` : ''}
+      ${draft.origin === 'own' ? `<label class="field">Your story, in one line<input id="story" maxlength="90" autocomplete="off" placeholder="Learned on a hoop with no net. Now I play under the lights." value="${esc(draft.story)}"></label>` : ''}
       <fieldset><legend class="field">How you look</legend><div class="looks">
         <div class="pic">${portrait(l, 1, 18)}</div>
         <div class="lookopts">
@@ -95,6 +107,7 @@
         </div>
       </div></fieldset>
       ${btn('begin', 'Begin')}
+      <p style="margin-top:var(--space-md)"><button type="button" class="link" data-a="roll">Roll a random life instead</button></p>
       <p class="hint" style="margin-top:var(--space-md)">${NOTE}</p>
     </section>`;
   }
@@ -253,10 +266,11 @@
     $('#stop').focus({ preventScroll: true });
   }
 
-  // Back to the setup screen, filled in with this player so a new build is one tap away.
-  // keep: leave the career in its slot instead of throwing it away.
+  // Abandoning: back to the form, filled in with this player so a new build is one tap away.
+  // keep: just switching careers, so leave it in its slot and offer a fresh random life.
   function toSetup(keep) {
-    draft = { name: s.name, sport: s.sport, pos: s.pos, country: s.country || 'NG', origin: s.origin, story: s.story, look: Object.assign({}, s.look) };
+    custom = !keep;
+    draft = keep ? G.randomLife() : { name: s.name, sport: s.sport, pos: s.pos, country: s.country || 'NG', origin: s.origin, story: s.story, look: Object.assign({}, s.look) };
     if (!keep) drop(slot);
     s = null; lastStep = ''; window.scrollTo(0, 0);
   }
@@ -276,6 +290,8 @@
     load: (b) => { slot = +b.dataset.i; s = read(slot); tab = 'career'; lastStep = ''; window.scrollTo(0, 0); },
     del: (b) => { const i = +b.dataset.i; if (confirm(`Delete ${read(i).name}'s career? It cannot be brought back.`)) drop(i); },
     switch: () => toSetup(true),
+    roll: () => { draft = G.randomLife(); custom = false; window.scrollTo(0, 0); },
+    custom: () => { custom = true; },
     spin: () => {
       G.spin(s);
       if (calm) return;

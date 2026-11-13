@@ -51,6 +51,8 @@ for (let n = 0; n < N; n++) {
   const l = s.cur.l; assert(Number.isFinite(l.score)); assert(s.after, 'no after-career choice');
   ranks[l.rank] = (ranks[l.rank] || 0) + 1; ribbons[l.ribbon] = (ribbons[l.ribbon] || 0) + 1; seasons += l.n; titles += s.titles;
 }
+// random lives are complete and get a birth line
+for (let i = 0; i < 200; i++) { const d = G.randomLife(), s = G.create(d); assert(d.name.includes(' ') && s.country === d.country && s.pos === d.pos); assert(s.log[0].a === 0 && !/undefined|  |, \./.test(s.log[0].t), s.log[0].t); }
 // every club has its own scoreboard name
 for (const sp of Object.values(G.SPORTS)) { const all = sp.teams.slice(1).flat(); assert.equal(new Set(all.map(G.short)).size, all.length, 'short team names clash'); }
 // an old save still loads

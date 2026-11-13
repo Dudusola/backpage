@@ -116,9 +116,37 @@
     },
   };
 
-  const FIRST = ['Tunde', 'Marcus', 'Chidi', 'Leo', 'Emeka', 'Darius', 'Kofi', 'Mateo', 'Segun', 'Andre', 'Ibrahim', 'Jonas', 'Femi', 'Rafael', 'Kwame', 'Niko'];
-  const LAST = ['Okafor', 'Bell', 'Adeyemi', 'Varga', 'Mensah', 'Castro', 'Balogun', 'Reyes', 'Osei', 'Lindqvist', 'Nwosu', 'Marsh', 'Diallo', 'Kovac', 'Eze', 'Santoro'];
-  const PARTNERS = ['Amara', 'Zainab', 'Sofia', 'Kemi', 'Elena', 'Tolu', 'Maya', 'Ada', 'Jordan', 'Sam', 'Ife', 'Noor'];
+  // Names by country: men | women | surnames.
+  const NAMES = Object.fromEntries(Object.entries({
+    AR: 'Mateo Santiago Thiago Facundo Lautaro Nicolás|Valentina Camila Lucía Julieta|González Fernández Romero Sosa Acuña Paredes',
+    AU: 'Jack Liam Lachlan Cooper Riley Josh|Chloe Isla Matilda Grace|Smith Walsh Kelly Mitchell Murray O’Brien',
+    BR: 'Gabriel Lucas João Rafael Vinícius Matheus|Ana Beatriz Larissa Juliana|Silva Santos Oliveira Souza Pereira Costa',
+    CM: 'Samuel Jean Vincent Eric Patrick André|Grace Mireille Estelle Carine|Etoundi Mbarga Nkoulou Ngono Abena Fokou',
+    CA: 'Liam Noah Ethan Owen Tyler Félix|Emma Olivia Chloé Avery|Tremblay Roy Campbell MacDonald Gagnon Brooks',
+    CI: 'Yao Koffi Serge Wilfried Moussa Ismaël|Aya Adjoua Mariam Nadia|Kouassi Koné Bamba Touré Kouadio Traoré',
+    EG: 'Omar Ahmed Youssef Karim Mahmoud Mostafa|Nour Salma Yasmin Mariam|Hassan Mansour Fathy Saleh Ibrahim Abdelaziz',
+    EN: 'Harry Jack Callum Reece Jordan Tom|Ellie Amelia Jess Hannah|Taylor Walker Hughes Barnes Wright Cole',
+    FR: 'Lucas Hugo Théo Mathis Yanis Kylian|Léa Manon Inès Camille|Martin Dubois Lefebvre Moreau Laurent Diaby',
+    DE: 'Lukas Jonas Leon Finn Niklas Felix|Lena Hannah Mia Laura|Müller Schmidt Weber Becker Wagner Hoffmann',
+    GH: 'Kwame Kofi Kwabena Yaw Kojo Nana|Abena Ama Akosua Efua|Mensah Owusu Boateng Asante Osei Appiah',
+    GR: 'Giorgos Nikos Kostas Dimitris Yannis Thanasis|Eleni Maria Katerina Sofia|Papadopoulos Georgiou Nikolaidis Pappas Vlachos Antoniou',
+    IT: 'Lorenzo Matteo Alessandro Francesco Gennaro Luca|Giulia Chiara Francesca Martina|Rossi Esposito Romano Ricci Russo Gallo',
+    JM: 'Jamal Andre Dwayne Kemar Ricardo Shane|Shanice Tanya Keisha Monique|Campbell Brown Williams Thompson Clarke Gayle',
+    JP: 'Haruto Ren Sota Yuki Daiki Takumi|Yui Aoi Hina Sakura|Sato Suzuki Takahashi Tanaka Watanabe Ito',
+    KE: 'Brian Kevin Dennis Victor Collins Eliud|Wanjiru Akinyi Faith Njeri|Odhiambo Kamau Mwangi Otieno Kiprop Wanyama',
+    LT: 'Lukas Mantas Jonas Domantas Rokas Arnas|Gabija Ieva Austėja Greta|Kazlauskas Petrauskas Jankauskas Stankevičius Butkus Žukauskas',
+    MX: 'Diego Luis Santiago Emiliano Alejandro Jorge|Ximena Valeria Daniela Fernanda|Hernández García Martínez López Ramírez Torres',
+    MA: 'Youssef Hamza Achraf Ayoub Mehdi Anas|Salma Imane Fatima Kenza|Benali Alaoui Bennani Idrissi Tazi Amrani',
+    NL: 'Daan Sem Lars Bram Thijs Jesse|Sanne Lotte Fleur Anouk|Jansen Bakker Visser Smit Meijer Mulder',
+    NG: 'Tunde Chidi Emeka Segun Femi Ifeanyi|Amara Kemi Tolu Zainab|Okafor Adeyemi Balogun Nwosu Eze Bello',
+    PT: 'João Tiago Diogo Rodrigo Rúben Afonso|Inês Beatriz Mariana Carolina|Silva Ferreira Pereira Costa Rodrigues Gonçalves',
+    SN: 'Moussa Cheikh Mamadou Ibrahima Abdou Pape|Awa Fatou Aminata Khady|Diop Ndiaye Fall Sarr Diallo Seck',
+    RS: 'Nikola Luka Stefan Marko Nemanja Dušan|Milica Jelena Ana Teodora|Jovanović Petrović Nikolić Marković Đorđević Stojanović',
+    ZA: 'Thabo Sipho Lwazi Bongani Kagiso Tyrone|Lerato Naledi Thandi Zanele|Dlamini Nkosi Mokoena Khumalo Ndlovu Botha',
+    KR: 'Min-jun Ji-ho Seo-jun Hyun-woo Jae-won Dong-hyun|Ji-woo Seo-yeon Ha-eun Min-ji|Kim Lee Park Choi Jung Kang',
+    ES: 'Pablo Álvaro Sergio Hugo Javier Dani|Lucía Paula Carmen Alba|García Fernández Ruiz Moreno Navarro Jiménez',
+    US: 'Jaylen Marcus Tyler Darius Caleb Isaiah|Jasmine Madison Brianna Taylor|Johnson Williams Davis Carter Brooks Harris',
+  }).map(([k, v]) => [k, v.split('|').map((x) => x.split(' '))]));
   // Where you are from: the food and the city colour the stories, the region picks the tournament.
   const COUNTRIES = [
     ['AR', 'Argentina', 'Argentine', 'asado', 'Rosario', 'sa'], ['AU', 'Australia', 'Australian', 'a meat pie', 'Melbourne', 'as'], ['BR', 'Brazil', 'Brazilian', 'feijoada', 'S\u00e3o Paulo', 'sa'],
@@ -135,7 +163,17 @@
   const CTRY = Object.fromEntries(COUNTRIES.map((c) => [c.id, c]));
   const CUPS = { af: ['AFCON', 'AfroBasket'], eu: ['the Euros', 'EuroBasket'], sa: ['the Copa Am\u00e9rica', 'the AmeriCup'], na: ['the Gold Cup', 'the AmeriCup'], as: ['the Asian Cup', 'the Asia Cup'] };
   const home = (s) => CTRY[s.country] || CTRY.NG; // saves from before countries existed already talked about jollof
-  const person = () => `${pick(FIRST)} ${pick(LAST)}`;
+  const anyC = () => pick(Object.keys(NAMES));
+  // Korean names put the family name first.
+  const person = (c = anyC()) => { const [m, , l] = NAMES[c] || NAMES.US; return c === 'KR' ? `${pick(l)} ${pick(m)}` : `${pick(m)} ${pick(l)}`; };
+  const her = (c = anyC()) => pick((NAMES[c] || NAMES.US)[1]);
+  const JOBS = ['a nurse', 'a bus driver', 'a teacher', 'a market trader', 'a mechanic', 'a cleaner', 'an accountant', 'a builder', 'a cook', 'a police officer', 'a shop owner', 'a taxi driver'];
+  // A whole new life, BitLife style: everything rolled, nothing typed.
+  function randomLife() {
+    const country = pick(COUNTRIES).id, sport = pick(Object.keys(SPORTS));
+    return { name: person(country), sport, pos: pick(SPORTS[sport].pos).id, country, origin: pick(ORIGINS.filter((o) => o.id !== 'own')).id, story: '',
+      look: { skin: ri(1, 6), hair: pick(['bald', 'buzz', 'fade', 'afro', 'locs', 'long']), beard: ri(0, 2), band: R() < 0.2 ? 1 : 0 } };
+  }
 
   // The reel in the Draw: real players, from greats to busts, every one equally likely. The ratings are our own opinion, not official data.
   // [name, position, sho, drv, pas, def, ath, cmp, height (inches for bb, cm for soc)]
@@ -355,8 +393,8 @@
       ['Stay out of it', 'You tell yourself it is not your business.', {}],
     ] },
     { id: 'meet', when: (s) => !s.partner && s.age >= 19, title: 'Someone new', text: 'Three people keep turning up in your life this year.', c: [
-      ['The old friend from home', 'You have known each other since you were nine. It is easy.', { morale: 10 }, (s) => { s.partner = { name: pick(PARTNERS), bond: 60, kind: 'home' }; }],
-      ['The famous one', 'Your first photo together is everywhere by morning.', { fame: 12, morale: 6 }, (s) => { s.partner = { name: pick(PARTNERS), bond: 45, kind: 'famous' }; }],
+      ['The old friend from home', 'You have known each other since you were nine. It is easy.', { morale: 10 }, (s) => { s.partner = { name: her(s.country), bond: 60, kind: 'home' }; }],
+      ['The famous one', 'Your first photo together is everywhere by morning.', { fame: 12, morale: 6 }, (s) => { s.partner = { name: her(), bond: 45, kind: 'famous' }; }],
       ['Stay single', 'The game comes first, you say.', { cmp: 1 }],
     ] },
     { id: 'time', when: (s) => s.partner && s.partner.bond < 55, title: 'Away again', text: '{partner} says you are never really home, even when you are.', c: [
@@ -593,10 +631,10 @@
   // ---------- career start ----------
   function create({ name, sport, pos, country, origin, story, look }) {
     const s = {
-      v: 3, country: CTRY[country] ? country : 'NG', pos: SPORTS[sport].pos.some((p) => p.id === pos) ? pos : SPORTS[sport].pos[0].id, cap: {}, src: {}, h: 0, look: Object.assign({ skin: 4, hair: 'fade', beard: 0, band: 0 }, look), name: (name || '').trim().slice(0, 18) || 'The Kid', sport, age: 18,
+      v: 3, country: CTRY[country] ? country : 'US', pos: SPORTS[sport].pos.some((p) => p.id === pos) ? pos : SPORTS[sport].pos[0].id, cap: {}, src: {}, h: 0, look: Object.assign({ skin: 4, hair: 'fade', beard: 0, band: 0 }, look), name: (name || '').trim().slice(0, 18) || 'The Kid', sport, age: 18,
       st: {}, coach: 55, mates: 50, morale: 60, fame: 5, health: 85, heat: 40, money: 20,
       partner: null, inv: [], f: {}, seen: {}, log: [], seasons: [], grades: [], days: 2, note: '',
-      names: { coach: person(), mate: person(), rival: person(), exCoach: '' },
+      names: { coach: person(), mate: person(), rival: person(country), exCoach: '' },
       team: '', tier: 3, teams: 0, contract: 4, salary: 0, titles: 0, mvps: 0, stars: 0, peak: 0,
       steps: [], si: 0, cur: { t: 'draw', left: KEYS.slice(), card: null, respin: 2, used: [] },
     };
@@ -604,6 +642,9 @@
     s.story = s.origin === 'own' ? (story || '').trim().slice(0, 90) : '';
     ch(s, ORIG[s.origin].d0);
     s.money = Math.max(0, s.money);
+    const C = home(s), kr = s.country === 'KR', w = s.name.split(' '), fam = w.length > 1 ? w[kr ? 0 : w.length - 1] : '';
+    const full = (first) => (kr ? [fam, first] : [first, fam]).filter(Boolean).join(' ');
+    s.log.push({ a: 0, t: `Born in ${C.city}, ${C.n}. Mother: ${full(her(s.country))}, ${pick(JOBS)}.${s.origin === 'single' ? ' Father: not around.' : s.origin === 'nepo' ? ' Father: a retired star, and nobody lets you forget it.' : ` Father: ${full(pick(NAMES[s.country][0]))}, ${pick(JOBS)}.`}` });
     return s;
   }
 
@@ -621,7 +662,7 @@
   // Throw the build away and draw again. Only before the first season starts.
   function redraw(s) {
     if (s.cur.t !== 'draw' && s.cur.t !== 'signed') return;
-    Object.assign(s, { st: {}, cap: {}, src: {}, h: 0, team: '', teams: 0, log: [], cur: { t: 'draw', left: KEYS.slice(), card: null, respin: 2, used: [] } });
+    Object.assign(s, { st: {}, cap: {}, src: {}, h: 0, team: '', teams: 0, log: s.log.filter((l) => l.a === 0), cur: { t: 'draw', left: KEYS.slice(), card: null, respin: 2, used: [] } });
   }
 
   const posOf = (s) => cfg(s).pos.find((p) => p.id === s.pos) || cfg(s).pos[0];
@@ -906,7 +947,7 @@
     date: { n: 'Time with your partner', need: (s) => !!s.partner, run: (s) => ['No phones. A whole evening.', { bond: 14, morale: 4 }] },
     gym: { n: 'Extra session', need: () => true, run: (s) => { const k = pick(KEYS); return ['Alone in the gym after dark.', { [k]: 1, health: -6 }]; } },
     rest: { n: 'Rest day', need: () => true, run: (s) => ['Feet up. Ice bath. Nothing else.', { health: 15, morale: 3 }] },
-    dating: { n: 'Go on a date', need: (s) => !s.partner && s.age >= 19, run: (s) => (R() < 0.4 ? (s.partner = { name: pick(PARTNERS), bond: 50, kind: 'date' }, ['It goes well. You see {partner} again, and again.', { morale: 8 }]) : ['Polite conversation and a split bill.', {}]) },
+    dating: { n: 'Go on a date', need: (s) => !s.partner && s.age >= 19, run: (s) => (R() < 0.4 ? (s.partner = { name: her(), bond: 50, kind: 'date' }, ['It goes well. You see {partner} again, and again.', { morale: 8 }]) : ['Polite conversation and a split bill.', {}]) },
     family: { n: 'Visit family', need: () => true, run: (s) => ['{food} on the table and everyone talking at once.', { morale: 10, health: 3 }] },
     party: { n: 'Hit the clubs', need: () => true, run: (s) => (R() < 0.25 ? ['Someone had a camera. The photos are online by morning.', { morale: 4, fame: 3, coach: -8, health: -6 }] : ['A great night, and nobody saw a thing.', { morale: 10, health: -6 }]) },
     charity: { n: 'Charity visit', need: () => true, run: (s) => ['A children\u2019s ward and a bag of signed shirts. You sit with one kid for an hour.', { fame: 3, morale: 6, money: -10 }] },
@@ -964,6 +1005,6 @@
     return { score, rank, ribbon, worth: w, n };
   }
 
-  const G = { SPORTS, KEYS, ORIGINS, ORIG, COUNTRIES, home, BUY, buy, POOL, optsFor, scoreAt, posOf, rate, zoneAt, redraw, migrate, build, fmtH, ARC, EV, ACTS, FUNDS, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, invest, cashOut, legacy, ovr, worth, money, short, tx };
+  const G = { SPORTS, KEYS, ORIGINS, ORIG, COUNTRIES, home, BUY, buy, POOL, optsFor, scoreAt, posOf, rate, zoneAt, redraw, migrate, build, fmtH, ARC, EV, ACTS, FUNDS, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, invest, cashOut, legacy, ovr, worth, money, short, randomLife, tx };
   if (typeof module !== 'undefined') module.exports = G; else root.G = G;
 })(this);
