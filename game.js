@@ -20,11 +20,11 @@
       mvp: 'MVP', star: 'All-Star', title: 'champions', final: 'The Finals', entry: 'Draft night', joined: 'Drafted by the {team}.', mid: 'went out in the play-offs',
       entryText: (t, n) => `With the ${ord(n)} pick, the ${t} take a chance on you. ${n <= 30 ? 'A four-year rookie deal and a locker by the door.' : 'A two-way contract and a lot to prove.'}`,
       base: (us, them) => [ri(86, 92) + Math.round((us - 70) / 2), ri(86, 92) + Math.round((them - 70) / 2)],
-      line: (st, mf, w) => {
+      line: (st, mf, w, share) => {
         const p = Math.max(2, w[0] * mf * ((st.sho + st.drv) / 2 - 45) * 0.62 + ri(-15, 15) / 10);
         const r = Math.max(1, w[1] * mf * (st.ath + st.def - 90) * 0.09 + ri(-8, 8) / 10);
         const a = Math.max(0.5, w[2] * mf * (st.pas - 45) * 0.2 + ri(-8, 8) / 10);
-        return `${p.toFixed(1)} pts · ${r.toFixed(1)} reb · ${a.toFixed(1)} ast`;
+        return `${Math.round(82 * share)} games · ${p.toFixed(1)} pts · ${r.toFixed(1)} reb · ${a.toFixed(1)} ast`;
       },
       // att: share of your moments spent attacking. w: weights on the season line (pts, reb, ast).
       pos: [
@@ -73,11 +73,11 @@
       mvp: 'Player of the Year', star: 'Team of the Season', title: 'champions', final: 'The Cup Final', entry: 'Signing day', joined: 'Signed by {team} from the academy.', mid: 'finished in the top half',
       entryText: (t, n) => `${t} sign you from the academy. A four-year deal, the number 27 shirt and a seat at the back of the bus.`,
       base: (us, them) => [(R() < 0.3 + (us - 70) / 100 ? 1 : 0), (R() < 0.4 + (them - 70) / 100 ? 1 : 0)],
-      line: (st, mf, w) => {
-        const g = Math.max(0, Math.round(w[0] * mf * (st.sho * 0.6 + st.drv * 0.4 - 50) * 0.75 + ri(-2, 2)));
-        const a = Math.max(0, Math.round(w[1] * mf * (st.pas - 50) * 0.4 + ri(-2, 2)));
+      line: (st, mf, w, share) => {
+        const g = Math.max(0, Math.round((w[0] * mf * (st.sho * 0.6 + st.drv * 0.4 - 50) * 0.6 + ri(-2, 2)) * share));
+        const a = Math.max(0, Math.round((w[1] * mf * (st.pas - 50) * 0.35 + ri(-2, 2)) * share));
         const rt = clamp(6 + ((avg(KEYS.map((k) => st[k])) - 60) / 15) * mf, 5, 9.6);
-        return `${g} goals · ${a} assists · ${rt.toFixed(1)} rating`;
+        return `${Math.round(38 * share)} apps · ${g} ${g === 1 ? 'goal' : 'goals'} · ${a} ${a === 1 ? 'assist' : 'assists'} · ${rt.toFixed(1)} rating`;
       },
       pos: [
         { id: 'ST', n: 'Striker', d: 'Live in the box. Judged on one number.', m: { sho: 3, def: -3 }, att: 0.75, off: ['shoot', 'header', 'takeon'], def: ['press', 'track'], w: [1.3, 0.7] },
@@ -302,7 +302,7 @@
   const LABEL = { coach: 'Coach', mates: 'Teammates', morale: 'Morale', fame: 'Fame', health: 'Fitness', money: 'Money', bond: 'Partner', heat: 'Rivalry' };
 
   const ovr = (s) => Math.round(avg(KEYS.map((k) => s.st[k])));
-  const worth = (s) => s.money + s.inv.reduce((t, i) => t + i.amt, 0) + Object.keys(s.stocks || {}).reduce((t, id) => t + holding(s, id), 0) + (s.homes || []).reduce((t, h) => t + h.val - h.loan, 0) + (s.cars || []).reduce((t, c) => t + c.val, 0);
+  const worth = (s) => s.money + s.inv.reduce((t, i) => t + i.amt, 0) + Object.keys(s.stocks || {}).reduce((t, id) => t + holding(s, id), 0) + (s.homes || []).reduce((t, h) => t + h.val - h.loan, 0) + (s.cars || []).reduce((t, c) => t + c.val, 0) + (s.lux || []).reduce((t, x) => t + x.val, 0);
   const cfg = (s) => SPORTS[s.sport];
   function tx(s, str) {
     const C = home(s), v = { team: s.team, name: s.name, partner: s.partner ? s.partner.name : 'your partner', country: C.n, adj: C.adj, food: C.food, city: C.city, cup: CUPS[C.r][s.sport === 'bb' ? 1 : 0] };
@@ -609,6 +609,35 @@
       ['Buy in for $250k', 'Your face goes on the menu boards. The chicken is fine.', { money: -250, fame: 3 }, (s) => { s.inv.push({ n: 'Chicken franchise', amt: 250, kind: 'franchise' }); }],
       ['Not your thing', 'You stick to the day job.', {}],
     ] },
+    { id: 'bid', pri: 1, when: (s) => s.names.bidder && s.tier > 1 && s.contract > 0 && s.seasons.length >= 1 && ovr(s) - LEVEL[s.tier] >= 4, title: 'A bid', text: '{bidder} have made an offer for you. {team} say it is your call.', c: [
+      ['Hand in a transfer request', 'Some fans burn your shirt. Most understand.', { mates: -6, fame: 5 }, (s) => { const b = s.names.bidder; moveTeam(s, s.tier - 1); s.team = b; return ['You sign for {team} the next morning.', { morale: 8 }]; }],
+      ['Stay and build something here', 'The dressing room hears about it. They will run through walls for you.', { mates: 8, coach: 6, fame: 2 }],
+      ['Use it to get a raise', 'Your agent leaks the bid. {team} blink first.', { coach: -4 }, (s) => { s.salary = Math.round(s.salary * 1.35); s.contract = Math.max(s.contract, 3); }],
+    ] },
+    { id: 'outcast', when: (s) => s.seasons.length >= 1 && role(s)[0] === 'Bench', title: 'Out of the picture', text: '{coach} tells you that you are not in his plans. Minutes will be rare.', c: [
+      ['Ask for a loan move', 'A season somewhere you will actually play.', { morale: 4 }, (s) => { moveTeam(s, Math.min(3, s.tier + 1)); return ['You are off to {team}. They start you on day one.', { coach: 8 }]; }],
+      ['Fight for your place', 'Extra sessions, no complaints. He notices, slowly.', { coach: 8, morale: -6, health: -4 }],
+      ['Go public', 'You tell a podcast exactly what you think of him.', { fame: 4, coach: -15 }],
+    ] },
+    { id: 'troll', when: (s) => followers(s) > 50000, title: 'Pile-on', text: 'Your worst moment from last night is a meme now, and the comments are a sewer.', c: [
+      ['Log off for a week', 'You read a book. It is fine.', { morale: 4 }],
+      ['Reply to every one', 'You do not win a single argument.', { morale: -8, fame: 3 }],
+      ['Post the meme yourself', 'You laugh at yourself first. The internet decides it likes you.', { fame: 4, morale: 6 }, (s) => { s.soc.acc.clip.f = Math.round(s.soc.acc.clip.f * 1.2); }],
+    ] },
+    { id: 'collab', when: (s) => followers(s) > 200000, title: 'The collab', text: 'A huge streamer wants you live on their channel tonight. You play tomorrow.', c: [
+      ['Do it', 'You stay up until three. Two million people watch.', { fame: 6, health: -8, coach: -4 }, (s) => { s.soc.acc.tube.f += 300000; }],
+      ['Go to sleep', 'Fresh legs. Your agent is furious.', { health: 5 }],
+    ] },
+    { id: 'brother', once: 1, when: (s) => s.seasons.length >= 2, title: 'Your little brother', text: 'Your younger brother wants to quit school to go pro, like you.', c: [
+      ['Pay for a top academy ($80k)', 'He moves in with a host family and calls every night.', { money: -80, morale: 4 }, (s) => (R() < 0.3 ? ['Two years later he signs his first contract. You cry in the stands.', { morale: 12 }] : ['He is good, not great. He finishes school anyway.', {}])],
+      ['Tell him to finish school', 'He does not talk to you for a month. He finishes school.', { morale: -3, cmp: 1 }],
+      ['Take him on the road with you', 'Hotel rooms, team buses and a lot of questions.', { morale: 8, coach: -3 }],
+    ] },
+    { id: 'tax', when: (s) => worth(s) > 3000, title: 'The tax man', text: 'A letter about your image-rights company. They think you owe a lot.', c: [
+      ['Pay what they ask', 'It hurts, and then it is over.', { money: -150 }],
+      ['Fight it in court', 'Your lawyers are confident.', {}, (s) => (R() < 0.5 ? ['You win. Not a cent.', { morale: 4 }] : ['You lose, with costs.', { money: -400, fame: -2, morale: -6 }])],
+      ['Hire a better accountant ($60k)', 'She finds everything they missed, in your favour.', { money: -60, cmp: 1 }],
+    ] },
     { id: 'after', when: () => false, title: 'What next?', text: 'The boots are off for good. You have a phone full of offers and the whole rest of your life.', c: [
       ['Become a coach', 'You start with the under-16s in {city}.', {}, (s) => (R() < 0.3 + s.st.cmp / 300 ? ['Five years later you are a head coach, and your players say you are fair.', { fame: 6 }] : ['It turns out explaining it is harder than doing it. You go back to the youth teams, happily.', { morale: 4 }])],
       ['Go into television', 'Suits, opinions and a catchphrase you come to regret.', { fame: 8, money: 300 }],
@@ -697,7 +726,9 @@
   function buildSeason(s) {
     const mid = shuffle(['event', 'event', 'match:Rivalry game'].concat(R() < 0.5 ? ['event'] : []));
     s.steps = ['arc', 'event', 'match:Opening night', ...mid, 'cut', 'report'];
-    s.si = -1; s.grades = []; s.days = 3; s.note = ''; s.final = null;
+    s.si = -1; s.grades = []; s.days = 3; s.note = ''; s.final = null; s.rec = null;
+    s.soc.posts = 6; s.soc.ads = 0; s.soc.note = '';
+    if (s.tier > 1) s.names.bidder = pick(cfg(s).teams[s.tier - 1]);
   }
 
   function teamStr(s) {
@@ -725,8 +756,10 @@
     } else if (step.startsWith('match:')) {
       if (s.f.injured) { say(s, `${step.slice(6)}: watched from the stands.`); return advance(s); }
       s.cur = { t: 'match', m: newMatch(s, step.slice(6)) };
+      if (s.opt.play !== 'all') autoplay(s, s.opt.play === 'big');
     } else if (step === 'cut') {
-      if (teamStr(s) + ri(-5, 5) >= 81 && !s.f.injured) s.steps.splice(s.si + 1, 0, 'match:' + cfg(s).final);
+      s.rec = simSeason(s);
+      if (s.rec.final) s.steps.splice(s.si + 1, 0, 'match:' + cfg(s).final);
       return advance(s);
     } else {
       s.cur = { t: 'report', r: endSeason(s) };
@@ -749,6 +782,38 @@
     s.cur.out = { text: tx(s, t), d: deltas };
     if (e.id === 'after') s.after = s.cur.out.text;
     say(s, `${tx(s, e.title)}: ${tx(s, label).toLowerCase().replace(/[“”]/g, '')}.`);
+  }
+
+  // ---------- the season off screen: a record, a place in the table, a play-off or cup run ----------
+  const LEVEL = [0, 84, 76, 68]; // what a regular starter looks like at each tier
+  const ROLES = [['Franchise star', 6, 1.12], ['Starter', -2, 1], ['Rotation', -8, 0.72], ['Bench', -99, 0.42]];
+  const role = (s) => ROLES.find((r) => ovr(s) - LEVEL[s.tier] >= r[1]);
+  const ROUNDS = ['missed the play-offs', 'went out in the first round', 'lost in the conference semi-finals', 'lost in the conference finals', 'reached the Finals'];
+  // Your team against a full league of rivals. Better clubs sit higher, but a star only lifts a team so far.
+  const pWin = (bb, d) => clamp((bb ? 0.5 : 0.37) + d * (bb ? 0.02 : 0.022), 0.05, bb ? 0.95 : 0.8);
+  function series(a, b) { let w = 0, l = 0; while (w < 4 && l < 4) R() < pWin(true, a - b) ? w++ : l++; return w === 4; }
+  function simSeason(s) {
+    const bb = s.sport === 'bb', base = [0, 82, 72, 62][s.tier], me = base + (teamStr(s) - base) * 0.4 + ri(-3, 3);
+    const others = (bb ? [3, 5, 6] : [4, 7, 8]).flatMap((k, t) => Array.from({ length: k }, () => [84, 72, 62][t] + ri(-5, 5)));
+    const exp = (x) => avg(others.concat(me).filter((y) => y !== x).map((y) => pWin(bb, x - y)));
+    const table = others.map((x) => (bb ? Math.round(82 * exp(x) + ri(-4, 4)) : Math.round(38 * (exp(x) * 3 + 0.26) + ri(-5, 5))));
+    let w = 0, d = 0;
+    for (let i = 0; i < (bb ? 82 : 38); i++) { const r = R(), pw = pWin(bb, me - pick(others)); if (r < pw) w++; else if (!bb && r < pw + 0.26) d++; }
+    const mine = bb ? w : w * 3 + d, place = 1 + table.filter((x) => x > mine || (x === mine && R() < 0.5)).length;
+    if (!bb) return { w, d, l: 38 - w - d, pts: mine, pos: place, final: R() < clamp((me - 70) / 60, 0.02, 0.25) };
+    let round = 0;
+    if (place <= 8) {
+      const seeds = others.slice().sort((x, y) => y - x);
+      round = 1;
+      const opp = [seeds[Math.min(seeds.length - 1, 8 - place)], seeds[ri(0, 3)], seeds[ri(0, 1)]];
+      while (round < 4 && series(me, opp[round - 1])) round++;
+    }
+    return { w, l: 82 - w, seed: place, round, final: round === 4 };
+  }
+  function recordLine(s, r) {
+    if (!r) return '';
+    if (s.sport === 'bb') return `${s.team} went ${r.w}–${r.l}, ${ord(r.seed)} in the conference, and ${ROUNDS[r.round]}`;
+    return `${s.team} finished ${ord(r.pos)} with ${r.pts} points (${r.w}W ${r.d}D ${r.l}L)`;
   }
 
   // ---------- matches: a handful of timed moments, each one against a real player ----------
@@ -784,9 +849,9 @@
     const c = cfg(s), isFinal = kind === c.final;
     const oppTier = isFinal ? 1 : ri(1, 3);
     const opp = kind === 'Rivalry game' ? `${s.names.rival}’s ${pick(c.teams[oppTier].filter((t) => t !== s.team))}` : pick(c.teams[oppTier].filter((t) => t !== s.team));
-    const [us, them] = c.base(teamStr(s), [0, 82, 72, 62][oppTier] + (isFinal ? 4 : 0));
+    const [us, them] = c.base(teamStr(s), isFinal ? Math.max(86, teamStr(s) + ri(-4, 2)) : [0, 82, 72, 62][oppTier]); // whoever you meet in a final is as good as you
     const m = { kind, opp, us, them, bu: us, bt: them, tier: isFinal ? 0 : oppTier, i: 0, hits: 0, mine: 0, opt: null, res: null, done: null, isFinal, moments: [] };
-    const n = ri(3, 5), att = posOf(s).att;
+    const n = ri(2, 4), att = posOf(s).att;
     const ks = Array.from({ length: n }, () => (R() < att ? 'off' : 'def'));
     if (ks.every((k) => k === ks[0])) ks[ri(0, n - 1)] = ks[0] === 'off' ? 'def' : 'off'; // always some of each
     const fs = ks.map(() => R() * 0.9).sort((a, b) => a - b);
@@ -876,6 +941,24 @@
     say(s, `${m.kind}: ${win ? 'beat' : draw ? 'drew with' : 'lost to'} ${m.opp} ${m.us}–${m.them}. Grade ${grade}.`);
   }
 
+  // Play moments for you: the move where your edge is biggest, and it comes off about as often as that edge says.
+  // big: stop and hand over when a clutch moment comes up.
+  function autoplay(s, big) {
+    const m = s.cur.m;
+    m.feed = m.feed || [];
+    while (!m.done) {
+      const mo = m.moments[m.i];
+      if (big && mo.clutch) return;
+      const opts = optsFor(s, mo), edge = (o) => s.st[o.k] - rate(mo.vs, o.vs);
+      const i = opts.reduce((b, o, j) => (edge(o) > edge(opts[b]) ? j : b), 0);
+      pickOpt(s, i);
+      const ok = R() < clamp(0.5 + edge(opts[i]) / 50 + (s.st.cmp - 70) / 200 - (mo.dbl ? 0.08 : 0), 0.2, 0.85);
+      while (!m.res) { const c = zoneAt(m.z, 0); stop(s, ok ? c : c < 50 ? 100 : 0, 0); }
+      m.feed.push(`${mo.clock} ${m.res.text}`);
+      nextMoment(s);
+    }
+  }
+
   // Saves from before positions: give them one and restart any match in progress.
   function migrate(s) {
     if (s.v === 2) {
@@ -883,24 +966,29 @@
       if (s.cur.t === 'match') s.cur.m = newMatch(s, s.cur.m.kind);
     }
     if (s.v === 3) assets(s);
+    if (s.cur.t === 'match' && !s.cur.m.feed) s.cur.m.feed = [];
   }
 
   // ---------- end of season ----------
   function endSeason(s) {
     const c = cfg(s), o = ovr(s), g = s.grades.length ? avg(s.grades) : 0.5, last = s.name.split(' ').pop().toUpperCase();
-    const mf = clamp(0.55 + s.coach / 250 + (o - 70) / 120 + (g - 0.5) * 0.2 + (s.morale - 50) / 400, 0.3, 1.1) * (s.f.injured ? 0.45 : 1);
-    const line = c.line(s.st, mf, posOf(s).w), str = teamStr(s);
-    const title = s.final === 'won';
+    const rl = role(s), bb = s.sport === 'bb', games = bb ? 82 : 38;
+    const gp = Math.max(1, Math.round(games * (s.f.injured ? 0.4 : 1) * (rl[2] >= 1 ? 1 : 0.6 + rl[2] / 2) - ri(0, bb ? 8 : 4)));
+    const mf = clamp(0.55 + s.coach / 250 + (o - 70) / 120 + (g - 0.5) * 0.2 + (s.morale - 50) / 400, 0.3, 1.1) * rl[2];
+    const line = c.line(s.st, mf, posOf(s).w, gp / games), rec = s.rec || simSeason(s);
+    const league = !bb && rec.pos === 1, title = s.final === 'won' || league;
     const awards = [];
-    if (title) { awards.push('Champion'); s.titles++; }
+    if (league) { awards.push('League champions'); s.titles++; }
+    if (s.final === 'won') { awards.push(bb ? 'Champion' : 'Cup winners'); s.titles++; }
     if (o >= 89 && mf > 0.85 && R() < 0.2 + (o - 89) * 0.07 + (title ? 0.2 : 0)) { awards.push(c.mvp); s.mvps++; }
     if (o >= 84 && mf > 0.75) { awards.push(c.star); s.stars++; }
     if (!s.seasons.length && o >= 74 && R() < 0.5) awards.push('Rookie of the Year');
     s.peak = Math.max(s.peak, o);
 
-    const finish = title ? `${s.team} are ${c.title}.` : s.final === 'lost' ? `${s.team} lost ${c.final.replace('The', 'the')}.` : str >= 72 ? `${s.team} ${c.mid}.` : `${s.team} finished in the bottom half.`;
-    const head = title ? `${last} LIFTS IT` : awards.includes(c.mvp) ? `${last} NAMED ${c.mvp.toUpperCase()}` : s.f.banned ? `${last} BANNED` : s.f.feud && s.coach < 32 ? `“HIM OR ME”` : s.f.injured ? `A YEAR ON THE TREATMENT TABLE` : s.final === 'lost' ? `SO CLOSE` : g >= 0.7 ? `${last} RUNS THE SHOW` : str < 64 ? `A LONG WINTER` : `STEADY YEAR FOR ${last}`;
-    const stand = s.f.banned ? `A failed test costs ${s.name} most of the season.` : s.f.feud && s.coach < 32 && !title ? `${s.name} and ${s.names.coach} are barely speaking. ${finish}` : `${finish} ${s.name}, ${s.age}, averaged ${line.replace(/ · /g, ', ')}.`;
+    const cup = s.final === 'won' ? (bb ? ' Then they won the Finals.' : ' And they won the cup.') : s.final === 'lost' ? ` ${c.final.replace('The', 'They lost the')}.` : '';
+    const finish = `${recordLine(s, rec)}.${cup}`, poor = bb ? rec.seed > 10 : rec.pos > 14;
+    const head = title ? `${last} LIFTS IT` : awards.includes(c.mvp) ? `${last} NAMED ${c.mvp.toUpperCase()}` : s.f.banned ? `${last} BANNED` : s.f.feud && s.coach < 32 ? `“HIM OR ME”` : s.f.injured ? `A YEAR ON THE TREATMENT TABLE` : s.final === 'lost' ? `SO CLOSE` : rl[0] === 'Bench' ? `${last} STUCK ON THE BENCH` : g >= 0.7 ? `${last} RUNS THE SHOW` : poor ? `A LONG WINTER` : `STEADY YEAR FOR ${last}`;
+    const stand = s.f.banned ? `A failed test costs ${s.name} most of the season.` : s.f.feud && s.coach < 32 && !title ? `${s.name} and ${s.names.coach} are barely speaking. ${finish}` : `${finish} ${s.name}, ${s.age}, ${rl[0].toLowerCase()}: ${line.replace(/ · /g, ', ')}.`;
 
     // money
     const notes = [];
@@ -915,6 +1003,7 @@
       else if (i.kind === 'car') i.amt = Math.round(i.amt * 0.85);
       else if (i.kind === 'crypto') { const r = R(); i.amt = Math.round(i.amt * (r < 0.15 ? 3 : r < 0.5 ? 1.2 : 0.45)); }
       else if (i.kind === 'franchise') { if (R() < 0.08) { i.amt = Math.round(i.amt * 0.5); notes.push(`Half the ${i.n.toLowerCase()} branches closed.`); } s.money += Math.round(i.amt * 0.1); }
+      else if (i.kind === 'biz') return bizYear(s, i, notes);
       else if (i.kind === 'brand') i.amt = Math.round(i.amt * (0.85 + s.fame / 150));
       else if (i.kind === 'resto') { if (R() < 0.22) { notes.push(`${i.n} closed. ${money(before)} gone.`); return false; } s.money += Math.round(i.amt * 0.12); }
       else if (i.kind === 'vc') {
@@ -925,6 +1014,8 @@
       return true;
     });
     yearOfAssets(s, notes);
+    luxYear(s, notes);
+    socYear(s, notes, title);
 
     s.seasons.push({ age: s.age, team: s.team, line, awards, o });
     say(s, `Season over. ${finish}${awards.length ? ' Honours: ' + awards.join(', ') + '.' : ''}`);
@@ -937,7 +1028,9 @@
     }
     s.coach = clamp(s.coach - 3 + (title ? 10 : 0)); s.mates = clamp(s.mates - 3 + (title ? 8 : 0));
     if (s.partner) s.partner.bond = clamp(s.partner.bond - (s.f.kids ? 3 : 6));
-    s.health = clamp(s.health + 12); s.fame = clamp(s.fame + awards.length * 4 - 1);
+    // fame drifts towards what your game, your club and your medals earn you; stunts only buy a few seasons
+    const fameFair = clamp((o - 62) * 2.2 + [0, 15, 6, 0][s.tier] + s.titles * 3 + s.mvps * 5);
+    s.health = clamp(s.health + 12); s.fame = clamp(Math.round(s.fame + (fameFair - s.fame) * 0.3 + awards.length * 3));
     s.contract--; s.f.injured = 0; s.f.banned = 0;
     const done = s.f.retire || s.age >= 39 || (s.age >= 31 && ovr(s) < 64) || s.health <= 5;
     if (done && !s.f.retire) notes.push(s.age >= 39 ? 'The body says enough. You retire.' : 'No club offers terms. You retire.');
@@ -955,7 +1048,6 @@
     family: { n: 'Visit family', need: () => true, run: (s) => ['{food} on the table and everyone talking at once.', { morale: 10, health: 3 }] },
     party: { n: 'Hit the clubs', need: () => true, run: (s) => (R() < 0.25 ? ['Someone had a camera. The photos are online by morning.', { morale: 4, fame: 3, coach: -8, health: -6 }] : ['A great night, and nobody saw a thing.', { morale: 10, health: -6 }]) },
     charity: { n: 'Charity visit', need: () => true, run: (s) => ['A children\u2019s ward and a bag of signed shirts. You sit with one kid for an hour.', { fame: 3, morale: 6, money: -10 }] },
-    post: { n: 'Post online', need: () => true, run: (s) => (R() < 0.3 ? ['It goes viral for the wrong reasons.', { fame: 4, coach: -5, morale: -4 }] : ['A training clip. People like it.', { fame: 3 }]) },
     mind: { n: 'See a sports psychologist', need: (s) => s.money >= 15, run: (s) => ['An hour about pressure. Some of it sticks.', { cmp: 1, morale: 6, money: -15 }] },
     coach1: { n: 'Hire a private coach ($60k)', need: (s) => s.money >= 60, run: (s) => { const k = KEYS.reduce((a, b) => (s.st[a] <= s.st[b] ? a : b)); return ['A week of drills on your weakest part.', { [k]: 2, money: -60 }]; } },
   };
@@ -964,7 +1056,7 @@
     if (s.days < 1 || !a.need(s)) return;
     s.days--;
     const [t, d] = a.run(s);
-    s.note = tx(s, t) + ' ' + ch(s, d).map(([l, v]) => `${l} ${v > 0 ? '+' : '−'}${Math.abs(v)}`).join(', ') + '.';
+    s.note = tx(s, t) + ' ' + fmtD(ch(s, d)) + '.';
   }
 
   // ---------- assets, BitLife style: a stock market, property listings and a car dealer ----------
@@ -983,7 +1075,11 @@
     ['BOND', 'Government bonds', 'Three per cent a year. Never moves.', 100, 0.03, 0, 0],
     ['BTCN', 'Bitcone', 'The big crypto coin. Wild.', 400, 0.1, 0.7, 0],
     ['HYPE', 'Hypecoin', 'A crypto coin with a dog on it.', 0.05, -0.1, 1.2, 0, 1],
-  ].map(([id, n, d, p, mu, vol, div, penny]) => ({ id, n, d, p, mu, vol, div, penny: !!penny, coin: ['BTCN', 'HYPE'].includes(id) }));
+    ['SKYW', 'SkyWay Airlines', 'Flies when the economy flies. Falls hardest in a crash.', 18, 0.05, 0.3, 0],
+    ['CHIP', 'Quantum Chips', 'Makes the chips in everything. Pricey and fast-growing.', 140, 0.1, 0.35, 0],
+    ['PHRM', 'Steady Pharma', 'Medicines. Slow, safe, pays a dividend.', 62, 0.04, 0.12, 0.03],
+    ['GOLD', 'Gold', 'A shiny rock. Goes up when everything else goes down.', 2000, 0.02, 0.12, 0],
+  ].map(([id, n, d, p, mu, vol, div, penny]) => ({ id, n, d, p, mu, vol, div, penny: !!penny, coin: ['BTCN', 'HYPE'].includes(id), safe: id === 'GOLD', air: id === 'SKYW' }));
   const STK = Object.fromEntries(STOCKS.map((x) => [x.id, x]));
   const HOMES = [['Studio flat', 120, 0.07], ['Two-bed apartment', 300, 0.065], ['Townhouse', 650, 0.06], ['Family house with a garden', 1200, 0.055], ['Penthouse', 2500, 0.05], ['Villa with a pool', 4500, 0.045], ['Mansion', 9000, 0.04]];
   const CITIES = ['Miami', 'London', 'Dubai', 'Lisbon', 'Barcelona', 'Los Angeles', 'Milan', 'Madrid', 'New York'];
@@ -1001,10 +1097,15 @@
   }
   // Older saves have none of this yet.
   function assets(s) {
-    if (!s.mkt) Object.assign(s, { mkt: Object.fromEntries(STOCKS.map((x) => [x.id, x.p])), chg: {}, stocks: {}, homes: [], cars: [] });
+    if (!s.mkt) Object.assign(s, { mkt: {}, chg: {}, stocks: {}, homes: [], cars: [] });
+    for (const x of STOCKS) if (!s.mkt[x.id]) s.mkt[x.id] = x.p; // new listings reach old saves too
     if (!s.list) listings(s);
+    if (!s.lux) s.lux = [];
+    if (!s.opt) s.opt = { play: 'all', stake: 0.1 };
+    if (!s.soc) s.soc = { acc: Object.fromEntries(PLATS.map((p) => [p.id, { f: 300 + s.fame * 150, v: 0, mon: 0 }])), posts: 6, ads: 0, note: '', cm: [] };
   }
-  const stake = (s) => Math.max(5, Math.round(s.money / 10 / 5) * 5); // a tenth of your cash, rounded
+  const stake = (s) => Math.max(5, Math.round((s.money * s.opt.stake) / 5) * 5); // your chosen share of cash, rounded
+  const setOpt = (s, k, v) => { if ((k === 'play' && ['all', 'big', 'sim'].includes(v)) || (k === 'stake' && [0.1, 0.25, 0.5].includes(v))) s.opt[k] = v; };
   const holding = (s, id) => (s.stocks[id] ? (s.stocks[id].sh * s.mkt[id]) / 1000 : 0);
   function buyStock(s, id) {
     const amt = stake(s);
@@ -1086,7 +1187,7 @@
     for (const x of STOCKS) {
       const old = s.mkt[x.id];
       let r = x.mu + x.vol * 2 * (R() + R() + R() - 1.5);
-      if (x.vol) r += crash ? (x.coin ? -0.5 : -0.3) : boom ? 0.15 : 0;
+      if (x.vol) r += crash ? (x.safe ? 0.15 : x.coin || x.air ? -0.5 : -0.3) : boom ? (x.safe ? -0.05 : 0.15) : 0;
       let p = Math.max(old * 0.05, old * (1 + r));
       if (x.penny && R() < 0.1) {
         if (s.stocks[x.id]) { notes.push(`${x.n} went bust. Your ${money(s.stocks[x.id].paid)} is gone.`); say(s, `${x.n} went bust and took your money with it.`); delete s.stocks[x.id]; }
@@ -1125,6 +1226,164 @@
     });
     listings(s);
   }
+  // Businesses you start yourself. They live in s.inv next to the deals that events hand you.
+  const BIZ = [
+    // name, cost, yearly profit as a share of its value, chance it goes under, blurb
+    ['Sneaker line with your name on it', 400, 0.12, 0.08, 'Sells better the more famous you are.'],
+    ['Gym franchise', 600, 0.1, 0.06, 'Steady, if the managers are honest.'],
+    ['Restaurant in {city}', 250, 0.14, 0.2, 'Most restaurants close. Some become institutions.'],
+    ['Esports team', 1200, 0.03, 0.12, 'Burns money. Worth a fortune if it ever wins.'],
+    ['Car dealership', 1500, 0.09, 0.05, 'Boring. Profitable.'],
+    ['Youth academy in {city}', 300, 0.02, 0.02, 'Barely makes money. Makes you a better person, and the town loves you.'],
+    ['A lower-league club', 6000, -0.02, 0.03, 'A money pit with a stadium attached. The fans will chant your name.'],
+  ];
+  function startBiz(s, b) {
+    const x = BIZ[b];
+    if (!x || s.money < x[1] || s.inv.some((i) => i.b === b)) return;
+    s.money -= x[1];
+    s.inv.push({ kind: 'biz', b, n: tx(s, x[0]), amt: x[1], paid: x[1] });
+    s.note = `You start the ${tx(s, x[0]).toLowerCase()}. ${pick(['The launch party is loud.', 'Your accountant sighs.', 'Your mother asks what it is, twice.'])}`;
+    say(s, `Started a business: ${tx(s, x[0]).toLowerCase()}.`);
+  }
+  function growBiz(s, i) {
+    const x = s.inv[i], amt = stake(s);
+    if (!x || x.kind !== 'biz' || s.money < amt) return;
+    s.money -= amt; x.amt += amt; x.paid = (x.paid || 0) + amt;
+    s.note = `You put ${money(amt)} more into the ${x.n.toLowerCase()}.`;
+  }
+  function bizYear(s, x, notes) {
+    const [, , m, risk] = BIZ[x.b];
+    if (R() < risk) { notes.push(`The ${x.n.toLowerCase()} went under. ${money(x.amt)} gone.`); say(s, `The ${x.n.toLowerCase()} went under.`); return false; }
+    const profit = Math.round(x.amt * (m + (R() - 0.5) * 0.12) * (x.b === 0 ? 0.5 + s.fame / 80 : 1));
+    s.money += profit;
+    x.amt = Math.max(10, Math.round(x.amt * (0.95 + R() * 0.15) * (x.b === 3 && R() < 0.1 ? 4 : 1)));
+    if (x.b === 5) ch(s, { morale: 3, fame: 1 });
+    if (x.b === 6) ch(s, { fame: 3 });
+    notes.push(`${x.n}: ${profit >= 0 ? 'profit' : 'loss'} ${money(Math.abs(profit))}, now worth ${money(x.amt)}.`);
+    return true;
+  }
+
+  // Luxury and collectibles: some keep their value, some cost a fortune to run.
+  const LUX = [
+    // name, price, yearly drift, swing, running cost as a share of value, fame when you buy it
+    ['Diamond watch', 60, -0.02, 0.05, 0, 1],
+    ['Signed vintage jersey', 40, 0.06, 0.25, 0, 0],
+    ['Painting by a young artist', 200, 0.05, 0.45, 0.01, 1],
+    ['Racehorse', 500, -0.05, 0.3, 0.12, 2],
+    ['Yacht', 3000, -0.08, 0.05, 0.08, 4],
+    ['Private jet', 9000, -0.1, 0.05, 0.1, 6],
+  ];
+  function buyLux(s, i) {
+    const x = LUX[i];
+    if (!x || s.money < x[1]) return;
+    s.money -= x[1]; s.lux.push({ i, n: x[0], val: x[1], paid: x[1] });
+    ch(s, { fame: x[5], morale: 4 });
+    s.note = `The ${x[0].toLowerCase()} is yours.`;
+    say(s, `Bought a ${x[0].toLowerCase()} for ${money(x[1])}.`);
+  }
+  function sellLux(s, i) {
+    const x = s.lux[i];
+    if (!x) return;
+    s.money += x.val; s.lux.splice(i, 1);
+    s.note = `Sold the ${x.n.toLowerCase()} for ${money(x.val)}. ${x.val >= x.paid ? 'Profit' : 'Loss'}: ${money(Math.abs(x.val - x.paid))}.`;
+    say(s, s.note);
+  }
+  function luxYear(s, notes) {
+    let cost = 0;
+    for (const x of s.lux) {
+      const [, , mu, vol, run] = LUX[x.i];
+      x.val = Math.max(1, Math.round(x.val * (1 + mu + vol * (R() * 2 - 1))));
+      cost += Math.round(x.val * run);
+      if (x.i === 3 && R() < 0.25) { const prize = Math.round(x.paid * 0.6); s.money += prize; notes.push(`Your racehorse won a big race: ${money(prize)}.`); say(s, 'Your racehorse won a big race.'); }
+    }
+    if (cost) { s.money -= cost; notes.push(`Crew, hangars, stables and insurance: ${money(cost)}.`); }
+  }
+
+  // ---------- social media, BitLife style: four apps, a few posts a season, a blue tick and money once you are big ----------
+  const PLATS = [
+    { id: 'pic', n: 'Snapgram', d: 'Photos. Where sponsors look first.', posts: ['train', 'life', 'fam'] },
+    { id: 'clip', n: 'ClipTok', d: 'Short videos. Goes viral, or nowhere.', posts: ['fun', 'train', 'reply'] },
+    { id: 'chirp', n: 'Chirper', d: 'Opinions, beef and breaking news.', posts: ['hot', 'reply', 'polit'] },
+    { id: 'tube', n: 'VidTube', d: 'Long videos. Pays once you are monetised.', posts: ['vlog', 'fun', 'train'] },
+  ];
+  // m: how far it travels; v: chance it goes viral; bad: chance it backfires
+  const POSTS = {
+    train: { n: 'Training clip', m: 1, v: 0.05, bad: 0, fx: { coach: 2 } },
+    life: { n: 'Lifestyle photo', m: 1.2, v: 0.06, bad: 0.05, fx: {} },
+    fam: { n: 'Family photo', m: 0.9, v: 0.04, bad: 0, fx: { morale: 3, bond: 4 } },
+    fun: { n: 'Dance challenge', m: 1.4, v: 0.15, bad: 0.12, fx: { mates: 3 } },
+    reply: { n: 'Clap back at a hater', m: 1.1, v: 0.12, bad: 0.3, fx: { morale: 4 } },
+    hot: { n: 'Hot take about {rival}', m: 1.3, v: 0.18, bad: 0.3, fx: { heat: 12 } },
+    polit: { n: 'Political opinion', m: 0.6, v: 0.1, bad: 0.55, fx: {} },
+    vlog: { n: 'Day-in-the-life vlog', m: 1.1, v: 0.06, bad: 0.03, fx: { mates: 2 } },
+  };
+  const HANDLES = ['hoopsdaily', 'tactics_nerd', 'benchwarmer9', 'courtside_carl', 'xg_merchant', 'nana.k', 'ultra_since98', 'the_real_scout', 'grandma_watches', '{adj}_fan_club'];
+  const SAYS = {
+    good: ['Different breed.', 'Sign him for life.', 'This is why I renewed my season ticket.', 'Ok I was wrong about you.', 'My son has this on his wall now.', 'Coach needs to see this.'],
+    bad: ['Delete this.', 'Focus on your job.', 'Bro is a content creator now.', 'Unfollowed.', 'Ratio.', 'Nobody asked.'],
+  };
+  const comments = (s, mood) => shuffle(SAYS[mood]).slice(0, 2).map((t) => `@${tx(s, pick(HANDLES)).toLowerCase()}: ${t}`);
+  const fmtF = (n) => (n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M' : n >= 1000 ? Math.round(n / 1000) + 'k' : String(Math.round(n)));
+  const fmtD = (d) => d.map(([l, v]) => `${l} ${v > 0 ? '+' : '−'}${l === 'Money' ? money(Math.abs(v)) : Math.abs(v)}`).join(', ');
+  const flexes = (s) => s.cars.some((c) => c.val >= 300) || s.homes.some((h) => h.val >= 2500) || s.lux.some((x) => x.i >= 4);
+  // How many followers your fame can hold on one app: about 120k at fame 20, 1.9M at 50, 15M at 100.
+  const ceiling = (s) => 2000 + s.fame ** 3 * 15;
+  const damp = (s, a, g) => (g > 0 && a.f > ceiling(s) ? Math.round(g * (ceiling(s) / a.f) ** 2) : g);
+  const followers = (s) => Object.values(s.soc.acc).reduce((t, a) => t + a.f, 0);
+  const socSay = (s, text, d, mood) => { s.soc.note = text + (d && d.length ? ' ' + fmtD(d) + '.' : ''); s.soc.cm = mood ? comments(s, mood) : []; };
+  function post(s, pid, type) {
+    const a = s.soc.acc[pid], p = POSTS[type], P = PLATS.find((x) => x.id === pid);
+    if (!a || !p || !P.posts.includes(type) || s.soc.posts < 1) return;
+    s.soc.posts--;
+    const reach = (300 + s.fame * s.fame * 20) * (0.5 + R()) * p.m * (a.v ? 1.25 : 1) * (type === 'life' && flexes(s) ? 1.6 : 1) + a.f * 0.02 * R();
+    const d = Object.assign({}, p.fx);
+    let t, gain, mood;
+    if (R() < p.bad) {
+      gain = -Math.round(a.f * (0.03 + R() * 0.07)); mood = 'bad';
+      t = type === 'polit' ? 'Half your followers agree. The other half leave.' : type === 'hot' ? '{rival} screenshots it and wins the internet.' : 'It goes badly. The quote-posts are brutal.';
+      Object.assign(d, { fame: 1, morale: -5, coach: type === 'polit' || type === 'hot' ? -4 : 0 });
+    } else if (R() < p.v) { gain = Math.round(reach * ri(6, 15)); mood = 'good'; t = 'It goes viral. Your phone does not stop buzzing for three days.'; d.fame = ri(2, 4); }
+    else { gain = Math.round(reach); mood = R() < 0.8 ? 'good' : 'bad'; t = pick(['People like it.', 'Solid numbers.', 'Your agent sends a thumbs up.', 'A quiet one, but the regulars love it.']); }
+    a.f = Math.max(0, a.f + damp(s, a, gain));
+    socSay(s, `${P.n} · ${tx(s, p.n)}. ${tx(s, t)} ${gain >= 0 ? '+' : '−'}${fmtF(Math.abs(gain))} followers.`, ch(s, d), mood);
+  }
+  // Blue tick at 100k followers and some fame; VidTube pays from a million.
+  function socDo(s, pid, what) {
+    const a = s.soc.acc[pid], P = PLATS.find((x) => x.id === pid);
+    if (!a) return;
+    if (what === 'verify') {
+      if (a.v) return;
+      if (a.f >= 100000 && s.fame >= 25) { a.v = 1; socSay(s, `${P.n} verified you. The blue tick is yours.`, ch(s, { fame: 2 })); }
+      else socSay(s, `${P.n} turned you down. You need 100k followers and some fame first.`);
+    } else if (what === 'monetize') {
+      if (pid !== 'tube' || a.mon) return;
+      if (a.f >= 1e6) { a.mon = 1; socSay(s, 'VidTube puts ads on your videos. They will pay you every season.'); }
+      else socSay(s, 'VidTube says come back at a million subscribers.');
+    } else if (what === 'ad') {
+      if (!a.v || s.soc.posts < 1) return;
+      s.soc.posts--; s.soc.ads++;
+      const pay = Math.max(2, Math.round((a.f / 1e6) * 30 * (0.7 + R() * 0.6)));
+      let lost = 0;
+      if (s.soc.ads > 2) { lost = Math.round(a.f * (0.05 + R() * 0.05)); a.f -= lost; }
+      socSay(s, `A sponsored post for ${pick(['an energy drink', 'a betting-free fantasy app', 'headphones', 'a protein bar', 'a watch brand', 'a phone'])}. ${lost ? `Too many adverts: −${fmtF(lost)} followers.` : 'Easy money.'}`, ch(s, { money: pay }), lost ? 'bad' : null);
+    } else if (what === 'buy') {
+      if (s.money < 20 || s.soc.posts < 1) return;
+      s.soc.posts--; s.money -= 20;
+      if (R() < 0.3) { socSay(s, 'A journalist works out your new followers are bots. The story is everywhere.', ch(s, { fame: -3, morale: -6, money: 0 }), 'bad'); }
+      else { a.f += 50000; socSay(s, `+50k followers on ${P.n}. They never comment.`); }
+    }
+  }
+  function socYear(s, notes, won) {
+    let pay = 0;
+    for (const p of PLATS) {
+      const a = s.soc.acc[p.id];
+      a.f = Math.round(a.f + damp(s, a, s.fame * s.fame * (5 + R() * 10) * (won ? 3 : 1)) - (a.f > ceiling(s) ? a.f * 0.05 : 0));
+      if (a.mon) pay += Math.round((a.f / 1e6) * 40);
+    }
+    if (pay) { s.money += pay; notes.push(`VidTube ad money ${money(pay)}.`); }
+    notes.push(`Followers: ${fmtF(followers(s))} across your accounts.`);
+  }
+
   const BUY = {
     parents: { n: 'A house for your parents', cost: 300, d: 'Not an investment. Worth it anyway.', fx: { morale: 18 } },
   };
@@ -1151,6 +1410,6 @@
     return { score, rank, ribbon, worth: w, n };
   }
 
-  const G = { SPORTS, KEYS, ORIGINS, ORIG, COUNTRIES, home, BUY, buy, POOL, optsFor, scoreAt, posOf, rate, zoneAt, redraw, migrate, build, fmtH, ARC, EV, ACTS, STOCKS, holding, stake, buyStock, sellStock, buyHome, homeDo, renoCost, buyCar, carDo, svcCost, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, cashOut, legacy, ovr, worth, money, short, randomLife, tx };
+  const G = { SPORTS, KEYS, ORIGINS, ORIG, COUNTRIES, home, BUY, buy, POOL, optsFor, scoreAt, posOf, rate, zoneAt, redraw, migrate, build, fmtH, ARC, EV, ACTS, STOCKS, holding, stake, buyStock, sellStock, buyHome, homeDo, renoCost, buyCar, carDo, svcCost, create, spin, place, advance, takeArc, choose, pickOpt, stop, nextMoment, act, cashOut, legacy, ovr, worth, money, short, randomLife, tx, role, setOpt, autoplay, BIZ, startBiz, growBiz, LUX, buyLux, sellLux, PLATS, POSTS, post, socDo, followers, fmtF };
   if (typeof module !== 'undefined') module.exports = G; else root.G = G;
 })(this);

@@ -171,7 +171,8 @@
     const head = `<p class="meta">${esc(m.kind)}${m.done ? ' · Full time' : ` · Moment ${m.i + 1} of ${m.moments.length}`}</p>
       <div class="score"><span>${esc(G.short(s.team))}</span><b>${G.scoreAt(m)[0]}</b><b>${G.scoreAt(m)[1]}</b><span>${esc(G.short(m.opp))}</span></div>`;
     if (m.done) return head + `<span class="grade" aria-label="Grade ${m.done.grade}">${m.done.grade}</span>
-      <p class="res">${m.done.win ? 'A win.' : m.done.draw ? 'A draw.' : 'A defeat.'} You came through in ${m.hits} of ${m.moments.length} moments${m.mine ? ` and scored ${m.mine}` : ''}.</p>${deltas(m.done.d)}${btn('cont', 'Continue')}`;
+      <p class="res">${m.done.win ? 'A win.' : m.done.draw ? 'A draw.' : 'A defeat.'} You came through in ${m.hits} of ${m.moments.length} moments${m.mine ? ` and scored ${m.mine}` : ''}.</p>${deltas(m.done.d)}
+      ${m.feed && m.feed.length ? `<ul class="notes">${m.feed.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}${btn('cont', 'Continue')}${playOpts()}`;
     const mo = m.moments[m.i], opts = G.optsFor(s, mo), him = last(mo.vs[0]);
     const who = `<p class="meta">${esc(mo.clock)}${mo.clutch ? ' · Clutch' : ''} · ${mo.k === 'def' ? 'Coming at you' : 'Marking you'}: ${esc(mo.vs[0])}</p>`;
     let body;
@@ -184,8 +185,11 @@
         ${btn('stop', 'Stop', 'id="stop"')}`;
     } else body = `<p class="text">${esc(mo.text)}</p><div class="choices">${opts.map((o, i) => choice('opt', i, o.l)).join('')}</div>
       <ul class="notes">${opts.map((o) => `<li>${esc(o.l)}: your ${sp.stats[o.k].toLowerCase()} ${s.st[o.k]} v his ${sp.stats[o.vs].toLowerCase()} ${G.rate(mo.vs, o.vs)}</li>`).join('')}</ul><p class="hint">The bigger your edge over ${esc(him)}, the wider the green.</p>`;
-    return head + who + court(s.sport, mo.k, mo.x) + body;
+    return head + who + court(s.sport, mo.k, mo.x) + body + (m.res || m.opt !== null ? '' : `<p style="margin-top:var(--space-md)"><button class="link" data-a="simrest">Simulate the rest of this game</button></p>${playOpts()}`);
   }
+  // How much of each match you play yourself. Same setting on the Record tab.
+  const PLAY = [['all', 'Play all'], ['big', 'Clutch'], ['sim', 'Sim']];
+  const playOpts = () => `<p class="meta" style="margin-top:var(--space-lg)">Matches</p><div class="seg three">${PLAY.map(([k, l]) => `<button type="button" class="choice small" data-a="play" data-k="${k}" aria-pressed="${s.opt.play === k}">${l}</button>`).join('')}</div>`;
 
   function career() {
     const ages = [...new Set(s.log.map((l) => l.a))].slice(-3).reverse();
@@ -199,7 +203,7 @@
   function life() {
     const sp = G.SPORTS[s.sport];
     return `<section class="step still"><figure class="photo">${me()}<figcaption>${G.home(s).adj} ${G.posOf(s).n.toLowerCase()} ·${G.fmtH(s.sport, s.h)}, ${G.build(s) === 'mid' ? 'average build' : G.build(s) + ' for the game'}</figcaption></figure>
-      <h2 class="title">Overall ${G.ovr(s)}</h2><p class="hint">Now, and your ceiling. You grow towards it until 26.</p>
+      <h2 class="title">Overall ${G.ovr(s)}</h2><p class="hint">Now, and your ceiling. You grow towards it until 26. Role at ${esc(G.short(s.team))}: <b>${G.role(s)[0]}</b>.</p>
       <ul class="bars wide" style="margin-top:var(--space-sm);clear:both">${ratings(sp)}</ul>
       <h2 class="sub">People</h2><ul class="bars">
         ${bar('Coach ' + last(s.names.coach), s.coach)}${bar('Teammates', s.mates)}${s.partner ? bar(s.partner.name, s.partner.bond) : ''}${bar('Rivalry with ' + last(s.names.rival), s.heat)}
@@ -213,7 +217,7 @@
 
   // Assets, laid out like BitLife's: what you own first, then what is for sale.
   const px = (p) => '$' + (p >= 100 ? Math.round(p) : p >= 1 ? p.toFixed(2) : p.toFixed(3));
-  const pct = (v) => (v === undefined ? '' : v === null ? 'relisted' : `<span class="${v < 0 ? 'dn' : 'up'}">${v < 0 ? '▼' : '▲'} ${Math.abs(Math.round(v * 100))}%</span>`);
+  const pct = (v) => (v === undefined ? '' : v === null ? 'relisted' : Math.round(v * 100) === 0 ? 'no change' : `<span class="${v < 0 ? 'dn' : 'up'}">${v < 0 ? '▼' : '▲'} ${Math.abs(Math.round(v * 100))}%</span>`);
   const row = (name, detail, acts) => `<li><div><b>${name}</b><span class="hint">${detail}</span></div><span class="acts">${acts}</span></li>`;
   const act2 = (a, label, attrs = '') => `<button class="choice small" data-a="${a}" ${attrs}>${label}</button>`;
   function moneyTab() {
@@ -233,7 +237,8 @@
         act2('buyhome', 'Cash', `data-i="${i}" ${s.money < h.val ? 'disabled' : ''}`) + act2('buyhome', `Mortgage, ${G.money(Math.round(h.val * 0.2))} down`, `data-i="${i}" data-k="m" ${s.money < Math.round(h.val * 0.2) ? 'disabled' : ''}`))).join('')}</ul>
       <p class="hint">Homes need upkeep and lose condition every year. Renting them out pays, until the tenants stop paying. Miss a mortgage payment and the bank takes the house.</p>
       <h2 class="sub">Stock market</h2>
-      <p class="hint">Each buy is a tenth of your cash: ${G.money(st)}. Prices move once a season.</p>
+      <p class="hint">Prices move once a season. Each buy, and each top-up of a business, is this much of your cash: ${G.money(st)}.</p>
+      <div class="seg three">${[0.1, 0.25, 0.5].map((f) => `<button type="button" class="choice small" data-a="stake" data-k="${f}" aria-pressed="${s.opt.stake === f}">${f * 100}%</button>`).join('')}</div>
       <ul class="rows">${G.STOCKS.map((x) => { const h = s.stocks[x.id], v = G.holding(s, x.id);
         return row(`${esc(x.n)} · ${px(s.mkt[x.id])} ${pct(s.chg[x.id])}`, h ? `You own ${G.money(v)} · ${pct(v / h.paid - 1)} on what you paid` : esc(x.d),
           act2('stock', 'Buy', `data-k="${x.id}" ${s.money < st ? 'disabled' : ''}`) + (h ? act2('sell', 'Sell', `data-k="${x.id}"`) : '')); }).join('')}</ul>
@@ -242,15 +247,38 @@
         (c.cond < 95 ? act2('car', `Service ${G.money(G.svcCost(c))}`, `data-i="${i}" data-k="service" ${s.money < G.svcCost(c) ? 'disabled' : ''}`) : '') + act2('car', 'Sell', `data-i="${i}" data-k="sell"`))).join('')}</ul>` : ''}
       <p class="meta">At the dealer</p>
       <ul class="rows">${s.list.cars.map((c, i) => row(`${c.cond < 100 ? 'Used' : 'New'} ${esc(c.n.toLowerCase())} · ${G.money(c.val)}`, c.vint ? 'Holds its value if you look after it.' : c.cond < 100 ? cond(c.cond) : 'Loses value the moment you drive off.', act2('buycar', 'Buy', `data-i="${i}" ${s.money < c.val ? 'disabled' : ''}`))).join('')}</ul>
-      ${s.inv.length ? `<h2 class="sub">Businesses and deals</h2><ul class="rows">${s.inv.map((x, i) => row(esc(x.n), G.money(x.amt), x.kind === 'resto' ? '<span class="hint">Family. It stays.</span>' : act2('cash', 'Cash out', `data-i="${i}"`))).join('')}</ul>` : ''}
+      <h2 class="sub">Businesses</h2>
+      ${s.inv.length ? `<ul class="rows">${s.inv.map((x, i) => row(esc(x.n), `Worth ${G.money(x.amt)}${x.paid ? ` · ${pct(x.amt / x.paid - 1)} on what you put in` : ''}`, x.kind === 'resto' ? '<span class="hint">Family. It stays.</span>' : (x.kind === 'biz' ? act2('grow', `Invest ${G.money(st)}`, `data-i="${i}" ${s.money < st ? 'disabled' : ''}`) : '') + act2('cash', x.kind === 'biz' ? 'Sell' : 'Cash out', `data-i="${i}"`))).join('')}</ul>` : ''}
+      <p class="meta">Start one</p>
+      <ul class="rows">${G.BIZ.map((b, i) => s.inv.some((x) => x.b === i) ? '' : row(`${esc(G.tx(s, b[0]))} · ${G.money(b[1])}`, esc(b[4]), act2('biz', 'Start', `data-i="${i}" ${s.money < b[1] ? 'disabled' : ''}`))).join('')}</ul>
+      <p class="hint">Businesses pay out every season and can grow, or go under. Selling one gets you what it is worth today.</p>
+      <h2 class="sub">Luxury and collectibles</h2>
+      ${s.lux.length ? `<ul class="rows">${s.lux.map((x, i) => row(esc(x.n), `Worth ${G.money(x.val)} · ${pct(x.val / x.paid - 1)}`, act2('sellux', 'Sell', `data-i="${i}"`))).join('')}</ul>` : ''}
+      <ul class="rows">${G.LUX.map((x, i) => row(`${esc(x[0])} · ${G.money(x[1])}`, x[4] ? `Costs about ${Math.round(x[4] * 100)}% of its value a year to keep.` : x[2] > 0 ? 'Could go up. Could go down.' : 'Slowly loses value.', act2('lux', 'Buy', `data-i="${i}" ${s.money < x[1] ? 'disabled' : ''}`))).join('')}</ul>
       <h2 class="sub">Family</h2>
       <ul class="rows">${Object.entries(G.BUY).map(([k, b]) => row(b.n, b.d, act2('buy', G.money(b.cost), `data-k="${k}" ${s.money < b.cost ? 'disabled' : ''}`))).join('')}</ul>
+    </section>`;
+  }
+
+  // Social media, BitLife style: a few posts a season across four apps.
+  function social() {
+    const sc = s.soc, none = sc.posts < 1;
+    return `<section class="step still"><p class="meta">Followers</p><h2 class="headline num">${G.fmtF(G.followers(s))}</h2>
+      <p class="hint">${sc.posts} ${sc.posts === 1 ? 'post' : 'posts'} left this season. Wins and trophies bring followers on their own. 100k followers and some fame gets you verified; verified accounts can take sponsored posts.</p>
+      ${sc.note ? `<p class="text">${esc(sc.note)}</p>${sc.cm && sc.cm.length ? `<ul class="notes">${sc.cm.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}` : ''}
+      ${G.PLATS.map((p) => { const a = sc.acc[p.id];
+        return `<h2 class="sub">${p.n}${a.v ? ' ✓' : ''} · ${G.fmtF(a.f)}</h2><p class="hint">${esc(p.d)}${a.mon ? ' Monetised.' : ''}</p>
+        <div class="acts">${p.posts.map((t) => act2('post', esc(G.tx(s, G.POSTS[t].n)), `data-k="${p.id}" data-t="${t}" ${none ? 'disabled' : ''}`)).join('')}
+        ${a.v ? act2('soc', 'Sponsored post', `data-k="${p.id}" data-t="ad" ${none ? 'disabled' : ''}`) : act2('soc', 'Ask for verification', `data-k="${p.id}" data-t="verify"`)}
+        ${p.id === 'tube' && !a.mon ? act2('soc', 'Monetise', `data-k="${p.id}" data-t="monetize"`) : ''}
+        ${act2('soc', 'Buy 50k followers ($20k)', `data-k="${p.id}" data-t="buy" ${none || s.money < 20 ? 'disabled' : ''}`)}</div>`; }).join('')}
     </section>`;
   }
 
   function record() {
     return `<section class="step still"><h2 class="title">Career record</h2>
       ${s.seasons.length ? `<div class="scroll"><table class="box"><tr><th>Age</th><th>Club</th><th>Season</th><th>Ovr</th></tr>${s.seasons.map((r) => `<tr><td>${r.age}</td><td>${esc(G.short(r.team))}${r.awards.length ? '<br>' + esc(r.awards.join(', ')) : ''}</td><td>${esc(r.line).replace(/ · /g, '<br>')}</td><td>${r.o}</td></tr>`).join('')}</table></div>` : `<p class="text">No seasons in the book yet.</p>`}
+      ${playOpts()}<p class="hint">Play all: you play every moment. Clutch: the game runs itself until the last seconds of a close one. Sim: no moments, just the result and how it happened.</p>
       <h2 class="sub">Your life, year by year</h2>${lifeLog([...new Set(s.log.map((l) => l.a))].reverse())}
       <p style="margin-top:var(--space-xl)">${installEvt ? `<button class="link" data-a="install">Install as an app</button> · ` : ''}<button class="link" data-a="switch">Saved careers</button> · <button class="link" data-a="fresh">Abandon this career</button></p>
       <p class="hint" style="margin-top:var(--space-md)">${NOTE}</p>
@@ -268,7 +296,7 @@
       $('#strip').innerHTML = `<span class="who"><b>${esc(s.name)}</b> · ${G.posOf(s).n} · ${esc(s.team)}</span><span class="cash">${G.money(s.money)}</span>`;
       document.querySelectorAll('#tabs button').forEach((b) => (b.dataset.k === tab ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
     }
-    view.innerHTML = !playing ? draw() : tab === 'life' ? life() : tab === 'money' ? moneyTab() : tab === 'record' ? record() : career();
+    view.innerHTML = !playing ? draw() : tab === 'life' ? life() : tab === 'money' ? moneyTab() : tab === 'social' ? social() : tab === 'record' ? record() : career();
     if (playing && tab === 'career' && s.cur.t === 'match' && s.cur.m.opt !== null && !s.cur.m.res) runMeter();
   }
 
@@ -339,7 +367,16 @@
     home: (b) => { if (b.dataset.k !== 'sell' || confirm('Sell this home?')) G.homeDo(s, +b.dataset.i, b.dataset.k); },
     buycar: (b) => G.buyCar(s, +b.dataset.i),
     car: (b) => G.carDo(s, +b.dataset.i, b.dataset.k),
-    cash: (b) => G.cashOut(s, +b.dataset.i),
+    cash: (b) => { if (s.inv[+b.dataset.i].kind !== 'biz' || confirm('Sell this business?')) G.cashOut(s, +b.dataset.i); },
+    play: (b) => G.setOpt(s, 'play', b.dataset.k),
+    simrest: () => G.autoplay(s, false),
+    stake: (b) => G.setOpt(s, 'stake', +b.dataset.k),
+    biz: (b) => G.startBiz(s, +b.dataset.i),
+    grow: (b) => G.growBiz(s, +b.dataset.i),
+    lux: (b) => G.buyLux(s, +b.dataset.i),
+    sellux: (b) => G.sellLux(s, +b.dataset.i),
+    post: (b) => G.post(s, b.dataset.k, b.dataset.t),
+    soc: (b) => G.socDo(s, b.dataset.k, b.dataset.t),
     fresh: () => { if (s.cur.t === 'end' || confirm('Abandon this career? It cannot be brought back.')) toSetup(); },
     install: () => { installEvt.prompt(); installEvt = null; },
   };

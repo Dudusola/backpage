@@ -1,5 +1,5 @@
 // Offline shell: cache-first. Bump V when any file changes.
-const V = 'backpage-10';
+const V = 'backpage-11';
 const FILES = ['./', 'index.html', 'tokens.css', 'style.css', 'game.js', 'ui.js', 'icon.svg', 'icon-512.png', 'manifest.webmanifest',
   'fonts/big-shoulders-display-latin-600-normal.woff2', 'fonts/big-shoulders-display-latin-800-normal.woff2',
   'fonts/newsreader-latin-400-normal.woff2', 'fonts/newsreader-latin-400-italic.woff2', 'fonts/newsreader-latin-600-normal.woff2',
